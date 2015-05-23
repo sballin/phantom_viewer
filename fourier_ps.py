@@ -15,7 +15,7 @@ def power_analysis(signal, PS):
 start_time = time.time()
 
 # Time
-time_step = 1e-8
+time_step = 1e-6
 t = np.arange(0., 1., time_step)
 
 # Signal 1: sin(2pi*[f in Hz])
@@ -28,13 +28,13 @@ power_analysis(signal1, PS1)
 # Signal 2: noise
 signal2 = np.random.normal(size=len(t))
 PS2 = np.abs(np.fft.fft(signal2))**2
-print '1V amplitude noise (normally distributed):'
+print 'Normally distributed noise:'
 power_analysis(signal2, PS2)
 
 # Signal 3: sine + noise
 signal3 = signal1 + signal2
 PS3 = np.abs(np.fft.fft(signal3))**2
-print '1V sine wave + 1V noise:'
+print '1V sine wave + noise:'
 power_analysis(signal3, PS3)
 
 print 'Computation time: %.4f seconds' % (time.time() - start_time)

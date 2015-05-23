@@ -5,9 +5,9 @@ import time
 start_time = time.time()
 
 # Generate data: sin(2pi*[f in Hz]) + noise
-time_step = .0001
+time_step = 1e-4
 t = np.arange(0., 1., time_step)
-data = np.sin(2*np.pi*10*t) + np.random.uniform(size=len(t)) - 0.5
+data = np.sin(2*np.pi*10*t) + np.random.normal(size=len(t)) - 0.5
 
 # a_corr <=> invfft(fft*conj(fft))
 
