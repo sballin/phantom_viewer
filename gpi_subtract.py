@@ -14,7 +14,7 @@ def animate_video(frames):
     im = plt.imshow(frames[0], cmap=plt.get_cmap('gray'))
     
     def init():
-        im.set_data(np.zeros((64, 64)))
+        im.set_data(frames[0])
         return [im]
     
     def animate(i):
