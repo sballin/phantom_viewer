@@ -3,6 +3,7 @@ import MDSplus
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.widgets import Slider, Button
+import matplotlib.gridspec as gridspec
 import numpy as np
 import signals
 import eqtools
@@ -22,6 +23,18 @@ def get_series(shot, camera, series_name):
     return series 
 
 
+def get_time_ha2(shot):
+    tree = MDSplus.Tree('spectroscopy', shot)
+    node = tree.getNode('\\ha_2_bright')
+    return node.dim_of().data(), node.data()
+
+
+def get_time_dens(shot):
+    tree = MDSplus.Tree('electrons', shot)
+    node = tree.getNode('tci.results.nl_04')
+    return node.dim_of().data(), np.array(node.data())/.6e20
+
+
 def flip_horizontal(frames):
     return frames[:,:,::-1]
 
@@ -37,7 +50,7 @@ def average_frames(frames, interval):
 
 
 def subtract_average(frames, interval):
-    # Truncate video to largest multiple of interval
+    # Truncate video frame count to largest multiple of interval
     remainder = frames.shape[0] % interval 
     if remainder != 0: frames = frames[:-remainder]
     return frames - average_frames(frames, interval)
@@ -51,63 +64,112 @@ def sum_frames(frames):
     return sum_frames
 
 
-def animate_video(frames):
-    fig = plt.figure()
-    im = plt.imshow(frames[0], cmap=plt.get_cmap('gray'))
-    
-    def init():
-        im.set_data(frames[0])
-        return [im]
-    
-    def animate(i):
-        im.set_array(frames[i])
-        return [im]
-    
-    dim = frames.shape
-    anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=dim[0], interval=0, blit=True)
-    plt.show()
-
-
 def get_frame_corners(shot, camera):
     if camera == 'phantom2':
-        return [.5095, -.429], [.5825, -.431], [.583, -.357], [.51, -.355]
+        return [[.5095, -.429], [.5825, -.431], [.583, -.357], [.51, -.355]]
     else:
         tree = MDSplus.Tree('spectroscopy', shot)
         # Convert R, Z coordinates from centimeters to meters
-        br = np.array(tree.getNode('gpi.%s.image_pos.br_corner' % camera).data())/100.
-        tr = np.array(tree.getNode('gpi.%s.image_pos.tr_corner' % camera).data())/100.
-        tl = np.array(tree.getNode('gpi.%s.image_pos.tl_corner' % camera).data())/100.
-        bl = np.array(tree.getNode('gpi.%s.image_pos.bl_corner' % camera).data())/100.
-        return bl, br, tr, tl
+        return [np.array(tree.getNode('gpi.%s.image_pos.%s_corner' % (camera, corner)).data())/100.
+                for corner in ['br', 'tr', 'tl', 'bl']]
 
 
-def slide_frames(time, frames, efit_tree):
+def get_extents(shot, camera):
+    bl, br, tr, tl = tuple(get_frame_corners(shot, camera))
+    rmin = np.mean((bl[0], tl[0]))
+    rmax = np.mean((br[0], tr[0]))
+    zmin = np.mean((bl[1], br[1]))
+    zmax = np.mean((tl[1], tr[1]))
+    return [rmin, rmax, zmin, zmax]
+
+
+def find_nearest(array, value):
+    return np.abs(array - value).argmin()
+
+
+def time_crop((time_s, signal), time):
+    argmin = find_nearest(time_s, time[0])
+    argmax = find_nearest(time_s, time[-1])
+    return time_s[argmin:argmax], signal[argmin:argmax]
+    
+
+def animate_video(shot, camera, time, frames, efit_tree):
     frame_count = frames.shape[0]
 
     efit_times = efit_tree.getTimeBase()
     rlcfs = efit_tree.getRLCFS()
     zlcfs = efit_tree.getZLCFS()
-
-    camera = 'phantom2'
-    bl, br, tr, tl = get_frame_corners(shot, camera)
-    rmin = np.mean((bl[0], tl[0]))
-    rmax = np.mean((br[0], tr[0]))
-    zmin = np.mean((bl[1], br[1]))
-    zmax = np.mean((tl[1], tr[1]))
-
-    def find_nearest(array, value):
-        return np.abs(array - value).argmin()
- 
     efit_t_index = find_nearest(efit_times, time[0])
+    extents = get_extents(shot, camera)
+    gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
+    fig, ax = plt.subplots()
+    plt.subplots_adjust(bottom=0.25)
+    plt.subplot(gs[0])
+    im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.get_cmap('gray'))
+    l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
+    plt.scatter(*zip(*get_frame_corners(shot, camera)), color='r')
+    plt.xlim(extents[0:2])
+    plt.ylim(extents[2:4])
+
+    time_ha2, ha2 = get_time_ha2(shot)
+    ax1 = plt.subplot(gs[1])#.locator_params(tight=True, nbins=6)
+    plt.plot(time_ha2, ha2)
+    plt.title('H alpha 2')
+    vl1 = plt.axvline(time[0], color='r')
+    plt.ylabel('Units?')
+    plt.xlim([time[0], time[-1]])
+    plt.ylim([0, 3])
+
+    time_dens, dens = time_crop(get_time_dens(shot), time)
+    ax2 = plt.subplot(gs[2])#.locator_params(tight=True, nbins=6)
+    plt.title('Line Average Density')
+    plt.plot(time_dens, dens)
+    vl2 = plt.axvline(time[0], color='r')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Units?')
+    plt.xlim([time[0], time[-1]])
+
+    def init():
+        im.set_data(frames[0])
+        efit_t_index = find_nearest(efit_times, time[0])
+        l.set_xdata(rlcfs[efit_t_index])
+        l.set_ydata(zlcfs[efit_t_index])
+        vl1.set_xdata(time[0])
+        vl2.set_xdata(time[0])
+        return [im, l, vl1, vl2]
+    
+    def animate(i):
+        im.set_array(frames[i])
+        efit_t_index = find_nearest(efit_times, i/float(frame_count)*(time[-1]-time[0]) + time[0])
+        l.set_xdata(rlcfs[efit_t_index])
+        l.set_ydata(zlcfs[efit_t_index])
+        vl1.set_xdata(time[i])
+        vl2.set_xdata(time[i])
+        return [im, l, vl1, vl2]
+    
+    dim = frames.shape
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                   frames=dim[0], interval=0, blit=True)
+    plt.tight_layout(pad=0)
+    plt.show()
+
+
+def slide_frames(camera, time, frames, efit_tree):
+    frame_count = frames.shape[0]
+
+    efit_times = efit_tree.getTimeBase()
+    rlcfs = efit_tree.getRLCFS()
+    zlcfs = efit_tree.getZLCFS()
+    efit_t_index = find_nearest(efit_times, time[0])
+    extents = get_extents(shot, camera)
  
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
-    im = plt.imshow(frames[0], origin='upper', extent=[rmin, rmax, zmin, zmax], cmap=plt.get_cmap('gray'))
+    im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.get_cmap('gray'))
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
-    plt.scatter(*zip(*[bl, br, tr, tl]), color='r')
-    plt.xlim([rmin, rmax])
-    plt.ylim([zmin, zmax])
+    plt.scatter(*zip(*get_frame_corners(shot, camera)), color='r')
+    plt.xlim(extents[0:2])
+    plt.ylim(extents[2:4])
 
     slide_area = plt.axes([0.10, 0.1, 0.70, 0.03])
     slider = Slider(slide_area, 'Time', time[0], time[-1], valinit=time[0])
@@ -135,8 +197,8 @@ def slide_frames(time, frames, efit_tree):
         global curr_frame
         start_frame = curr_frame
         im.set_data(frames[curr_frame])
-        l.set_xdata(rlcfs[argt])
-        l.set_ydata(zlcfs[argt])
+        l.set_xdata(rlcfs[efit_t_index])
+        l.set_ydata(zlcfs[efit_t_index])
         for i in xrange(curr_frame, curr_frame + 100): 
             slider.set_val(i/float(frame_count)*(time[-1]-time[0])+time[0])
         slider.set_val(start_frame/float(frame_count)*(time[-1]-time[0])+time[0])
@@ -144,8 +206,8 @@ def slide_frames(time, frames, efit_tree):
 
     def animate(i):
         im.set_array(frames[i])
-        l.set_xdata(rlcfs[argt])
-        l.set_ydata(zlcfs[argt])
+        l.set_xdata(rlcfs[efit_t_index])
+        l.set_ydata(zlcfs[efit_t_index])
         return [im, l]
     
     def play(event):
@@ -154,13 +216,6 @@ def slide_frames(time, frames, efit_tree):
 
     playbutton.on_clicked(play)
     plt.show()
-
-
-def rotate(points, origin, angle):
-    origin = np.array([origin[0], origin[1]])
-    angle = angle*np.pi/180.
-    return np.dot(points - origin, np.array([[np.cos(angle), np.sin(angle)],
-                                             [-np.sin(angle), np.cos(angle)]])) + origin
 
 
 # Cziegler: 1101209014 with apd_array 
@@ -174,5 +229,6 @@ frames = flip_horizontal(frames)
 frames = subtract_average(frames, 5)
 
 time = get_series(shot, camera, 'time')
-slide_frames(time, frames, efit_tree)
+animate_video(shot, camera, time, frames, efit_tree)
+#slide_frames(camera, time, frames, efit_tree)
 
