@@ -150,11 +150,11 @@ def animate_video(shot, camera, time, frames, efit_tree):
     dim = frames.shape
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=dim[0], interval=0, blit=True)
-    plt.tight_layout(pad=0)
+    plt.tight_layout(pad=1)
     plt.show()
 
 
-def slide_frames(camera, time, frames, efit_tree):
+def slide_frames(shot, camera, time, frames, efit_tree):
     frame_count = frames.shape[0]
 
     efit_times = efit_tree.getTimeBase()
@@ -162,30 +162,52 @@ def slide_frames(camera, time, frames, efit_tree):
     zlcfs = efit_tree.getZLCFS()
     efit_t_index = find_nearest(efit_times, time[0])
     extents = get_extents(shot, camera)
- 
+    gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
+    plt.subplot(gs[0])
     im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.get_cmap('gray'))
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     plt.scatter(*zip(*get_frame_corners(shot, camera)), color='r')
     plt.xlim(extents[0:2])
     plt.ylim(extents[2:4])
 
-    slide_area = plt.axes([0.10, 0.1, 0.70, 0.03])
-    slider = Slider(slide_area, 'Time', time[0], time[-1], valinit=time[0])
+    time_ha2, ha2 = get_time_ha2(shot)
+    ax1 = plt.subplot(gs[1])#.locator_params(tight=True, nbins=6)
+    plt.plot(time_ha2, ha2)
+    plt.title('H alpha 2')
+    vl1 = plt.axvline(time[0], color='r')
+    plt.ylabel('Units?')
+    plt.xlim([time[0], time[-1]])
+    plt.ylim([0, 3])
+
+    time_dens, dens = time_crop(get_time_dens(shot), time)
+    ax2 = plt.subplot(gs[2])#.locator_params(tight=True, nbins=6)
+    plt.title('Line Average Density')
+    plt.plot(time_dens, dens)
+    vl2 = plt.axvline(time[0], color='r')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Units?')
+    plt.xlim([time[0], time[-1]])
+
+    slide_area = plt.axes([0.10, 0.1, 0.65, 0.03])
+    slider = Slider(slide_area, 'Frame', 0, frame_count, valinit=0)
     slider.drawon = True
-    slider.valfmt = '%.5f'
+    slider.valfmt = '%d'
     curr_frame = 0
 
     def update(val):
         global curr_frame
-        curr_frame = int((slider.val-time[0])/(time[-1]-time[0])*frame_count)
-        slider.valtext.set_text('%.5f (f %d)' % (val, curr_frame))
-        if curr_frame < frame_count: 
-            im.set_array(frames[curr_frame])
-            efit_t_index = find_nearest(efit_times, val)
+        curr_frame = val 
+        curr_time = time[val]
+        slider.valtext.set_text('%d (t=%.5f s)' % (val, curr_time))
+        if val < frame_count: 
+            im.set_array(frames[val])
+            efit_t_index = find_nearest(efit_times, curr_time)
             l.set_xdata(rlcfs[efit_t_index])
             l.set_ydata(zlcfs[efit_t_index])
+            vl1.set_xdata(curr_time)
+            vl2.set_xdata(curr_time)
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
@@ -195,20 +217,27 @@ def slide_frames(camera, time, frames, efit_tree):
 
     def init():
         global curr_frame
+        curr_frame = int(curr_frame)
         start_frame = curr_frame
         im.set_data(frames[curr_frame])
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
-        for i in xrange(curr_frame, curr_frame + 100): 
-            slider.set_val(i/float(frame_count)*(time[-1]-time[0])+time[0])
-        slider.set_val(start_frame/float(frame_count)*(time[-1]-time[0])+time[0])
-        return [im, l]
+        vl1.set_xdata(time[curr_frame])
+        vl2.set_xdata(time[curr_frame])
+        for i in xrange(curr_frame, curr_frame + 100, 2): 
+            slider.set_val(i)
+            vl1.set_xdata(time[i])
+            vl2.set_xdata(time[i])
+        slider.set_val(start_frame)
+        return [im, l, vl1, vl2]
 
     def animate(i):
         im.set_array(frames[i])
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
-        return [im, l]
+        vl1.set_xdata(time[i])
+        vl2.set_xdata(time[i])
+        return [im, l, vl1, vl2]
     
     def play(event):
         anim = animation.FuncAnimation(fig, animate, init_func=init,
@@ -229,6 +258,6 @@ frames = flip_horizontal(frames)
 frames = subtract_average(frames, 5)
 
 time = get_series(shot, camera, 'time')
-animate_video(shot, camera, time, frames, efit_tree)
-#slide_frames(camera, time, frames, efit_tree)
+#animate_video(shot, camera, time, frames, efit_tree)
+slide_frames(shot, camera, time, frames, efit_tree)
 
