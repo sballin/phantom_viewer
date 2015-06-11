@@ -91,7 +91,7 @@ def time_crop((time_s, signal), time):
     argmin = find_nearest(time_s, time[0])
     argmax = find_nearest(time_s, time[-1])
     return time_s[argmin:argmax], signal[argmin:argmax]
-    
+
 
 def animate_video(shot, camera, time, frames, efit_tree):
     frame_count = frames.shape[0]
@@ -248,16 +248,12 @@ def slide_frames(shot, camera, time, frames, efit_tree):
 
 
 # Cziegler: 1101209014 with apd_array 
-shot = 1150528015   
+shot = 1150611004 #1150528015   
 camera = 'phantom2'
-frames = get_series(shot, camera, 'frames') 
-
+time = get_series(shot, camera, 'time')
+frames = subtract_average(flip_horizontal(get_series(shot, camera, 'frames')), 5)
 efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
 
-frames = flip_horizontal(frames)
-frames = subtract_average(frames, 5)
-
-time = get_series(shot, camera, 'time')
 #animate_video(shot, camera, time, frames, efit_tree)
 slide_frames(shot, camera, time, frames, efit_tree)
 
