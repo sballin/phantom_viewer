@@ -20,7 +20,7 @@ def animate_video(frames):
 
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
-    im = plt.imshow(frames[0], origin='lower', cmap=plt.get_cmap('gray'))
+    im = plt.imshow(frames[0], origin='upper', cmap=plt.get_cmap('hot'))
 
     def init():
         im.set_data(frames[0])
@@ -33,13 +33,15 @@ def animate_video(frames):
     dim = frames.shape
     anim = animation.FuncAnimation(fig, animate, init_func=init,
                                    frames=dim[0], interval=0, blit=True)
+
     plt.tight_layout(pad=1)
     plt.show()
 
 
 # Cziegler: 1101209014 with apd_array 
-shot = 1150528015   
-frames = get_frames(shot)
-
-animate_video(frames)
-
+#shot = int(sys.argv[1])
+#frames = get_frames(shot)
+#animate_video(frames)
+tree = MDSplus.Tree('spectroscopy', 1150528015)
+series = tree.getNode('video_daq.matrox3.camera_2').data()
+animate_video(series)

@@ -9,12 +9,16 @@ import signals
 import eqtools
 
 
-def get_series(shot, camera, series_name):
+def get_gpi_series(shot, camera, series_name):
     tree = MDSplus.Tree('spectroscopy', shot)
     if series_name == 'time': 
         try: series = tree.getNode('gpi.%s.t_hists' % camera).dim_of().data()
         except MDSplus._tdishr.TdiException: 
-            sys.exit('ERROR loading time')
+            print 'Time not loaded from t_hists'
+            start = tree.getNode('gpi.%s.settings.trig_time' % camera).data()
+            frame_rate = tree.getNode('gpi.%s.settings.frame_rate' % camera).data()
+            num_frames = tree.getNode('gpi.%s.settings.num_frames' % camera).data()
+            return np.arange(start, start + num_frames/float(frame_rate), 1./frame_rate)
     else: 
         try: series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
         except MDSplus._tdishr.TdiException: 
@@ -36,7 +40,7 @@ def get_time_dens(shot):
 
 
 def flip_horizontal(frames):
-    return frames[:,:,::-1]
+    return frames[:, :, ::-1]
 
 
 def average_frames(frames, interval):
@@ -247,13 +251,17 @@ def slide_frames(shot, camera, time, frames, efit_tree):
     plt.show()
 
 
-# Cziegler: 1101209014 with apd_array 
-shot = 1150611004 #1150528015   
-camera = 'phantom2'
-time = get_series(shot, camera, 'time')
-frames = subtract_average(flip_horizontal(get_series(shot, camera, 'frames')), 5)
-efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+def main():
+    # Cziegler: 1101209014 with apd_array 
+    shot = 1150611004 #1150528015   
+    camera = 'phantom2'
+    time = get_gpi_series(shot, camera, 'time')
+    frames = subtract_average(flip_horizontal(get_gpi_series(shot, camera, 'frames')), 5)
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
 
-#animate_video(shot, camera, time, frames, efit_tree)
-slide_frames(shot, camera, time, frames, efit_tree)
+    animate_video(shot, camera, time, frames, efit_tree)
+    #slide_frames(shot, camera, time, frames, efit_tree)
 
+
+if __name__ == '__main__':
+    main()

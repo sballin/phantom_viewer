@@ -34,19 +34,23 @@ def show_region(frames, region):
     #plt.show()
 
 
-# Cziegler: 1101209014 with apd_array 
 shot = 1150528015   
 camera = 'phantom2'
 
-time = gpi.get_series(shot, camera, 'time')
+time = gpi.get_gpi_series(shot, camera, 'time')
+frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
 
 centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
 
 for (x, y) in centers:
-    pixel = np.zeros(gpi.frames.shape[0])
+    pixel = np.zeros(frames.shape[0])
     region = surrounding_pixels(x, y, 5)
     for p in region:
-        pixel += gpi.frames[:, p[0], p[1]] 
+        pixel += frames[:, p[0], p[1]] 
+
+    plt.figure()
+    plt.plot(time, pixel)
+    plt.show()
 
     before_transition = gpi.find_nearest(time, .61329)
     pixel_before = pixel[0:before_transition]
@@ -56,22 +60,23 @@ for (x, y) in centers:
     pixel_after = pixel[0:after_transition]
     time_after = time[0:after_transition]
     
-    freqs_after, PS_after = signals.power_spectrum(time_after, pixel_after)
-    freqs_before, PS_before = signals.power_spectrum(time_before, pixel_before)
+    freqs_after, PS_after = signals.windowed_power_spectrum(time_after, pixel_after, 1024, .5)
+    freqs_before, PS_before = signals.windowed_power_spectrum(time_before, pixel_before, 1024, .5)
 
     plt.figure()
     gs = gridspec.GridSpec(1, 2, width_ratios=[1, 2])
     plt.subplot(gs[0])
-    show_region(gpi.frames, region)
+    show_region(frames, region)
     plt.subplot(gs[1])
     plt.title('Power spectrum for points around (%s, %s)' % (x, y))
-    plt.plot(freqs_after, PS_after, c='r', label='after')
-    plt.plot(freqs_before, PS_before, c='b', label='before')
+    plt.plot(freqs_after, PS_after, 'r-', label='after')
+    plt.plot(freqs_before, PS_before, 'b-', label='before')
     plt.legend()
     plt.yscale('log')
+    plt.xscale('log')
     plt.ylabel('Magnitude')
     plt.xlabel('Frequency (Hz)')
     plt.autoscale()
     plt.tight_layout(pad=1)
-    plt.show()
     
+plt.show()
