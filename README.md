@@ -1,7 +1,62 @@
 Signal tools
 ============
 
-Agreeing power calculations:
+
+GPI analysis
+------------
+
+File: `analyze_gpi.py` using `signals.py` and `bicoherence.py`
+
+Signals analyzed: sums of pixel fluctuations in each red square (fourth is barely visible due to red background).
+
+Windowed FFT with tiny error bars corresponding to standard error between power spectra for each window. For equal-length portions of the timeseries before and after the L-H transition around 0.615 seconds, around 24 Hanning-weighted windows with 50% overlap were used:
+
+![](resources/pspectra.jpg)
+
+__Less danger:__ 
+- Using `scipy.signal.welch` instead of custom windowed FFT code
+- Calculations of total power from signal variance and non-windowed power spectrum agree up to 8 decimal places with linear detrend over entire timeseries
+- Windowed power spectrum results in significantly different total power (same order of magnitude at least), but is pretty close to result from variance of signal detrended along a similar number of windows
+
+Bicoherence analysis for each square:
+
+![](resources/bispecs.png)
+
+__Danger:__ 
+- Make sure the axis along which data is read corresponds to continuous slices of the timeseries, not every other Nth element in the timeseries
+- Tradeoff between number of records to average and resolution of FFT, which is related to the length of each record
+- Make sure frequency calculation using time step is correct
+- Possibly use `scipy.signal.periodogram` instead of direct FFT and frequency calculations
+
+
+GPI video viewer
+----------------
+
+File: `gpi.py`
+
+View video from specified camera and shot synced to H alpha and line average density timeseries. Overlaid in red is the last closed flux surface:
+
+![](resources/gpidisp.png)
+
+__Danger:__ corner locations depend on focal depth and position, angle of camera, which have yet to be accurately determined.
+
+
+Other video viewer
+------------------
+
+File: `vid_view.py`
+
+View video from any camera for a shot. `raspi2` could be useful for an overview of the x-point, shown here for shot 1150528015:
+
+![](resources/raspi2.png)
+
+
+Total power test
+----------------
+
+File: `fourier_ps.py`
+
+Calculations of total power from the power spectrum and the variance of the signal agree:
 
     1V amplitude sine wave at 300 Hz:
         sqrt of total PS(signal):
@@ -21,15 +76,21 @@ Agreeing power calculations:
 
 ![](resources/fourier_ps.png)
 
----
+
+Cross-power spectrum
+--------------------
+
+File: `cross_power.py`
 
 Cross-power spectrum of sine waves with frequency 3 and 7 Hz:
 
 ![](resources/cross_power.png)
 
----
 
-Autocorrelation using FFT:
+FFT autocorrelation 
+-------------------
+
+File: `fft_a_corr.py`
 
 ![](http://mathworld.wolfram.com/images/equations/FourierTransform/NumberedEquation3.gif)
 
@@ -41,15 +102,21 @@ Taking the real part:
 
 Faster than direct autocorrelation and seems accurate, although not normalized.
 
----
+
+Direct autocorrelation 
+----------------------
+
+File: `a_corr.py`
 
 Autocorrelation computed directly. Output for `sin(2*pi*10*x) + noise`:
 
 ![](resources/a_corr.png)
 
-It runs slowly compared to FFT when there are many points in the signal. I'm also not sure why there is attenuation around the edges.
+It runs slowly compared to FFT when there are many points in the signal. Also not sure why there is attenuation around the edges.
 
----
+
+Power spectrum
+--------------
 
 Power spectrum for `sin(2*pi*10.5*x) + sin(2*pi*75.5*x) + noise`. We see wide peaks around 10.5 and 75.5 as expected because the frequency bins are centered at the integers.
 

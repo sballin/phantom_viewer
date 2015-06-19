@@ -253,14 +253,14 @@ def slide_frames(shot, camera, time, frames, efit_tree):
 
 def main():
     # Cziegler: 1101209014 with apd_array 
-    shot = 1150611004 #1150528015   
-    camera = 'phantom2'
+    shot = 1150611004 #1150611004 #1150528015   
+    camera = 'phantom'
     time = get_gpi_series(shot, camera, 'time')
     frames = subtract_average(flip_horizontal(get_gpi_series(shot, camera, 'frames')), 5)
     efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
 
-    animate_video(shot, camera, time, frames, efit_tree)
-    #slide_frames(shot, camera, time, frames, efit_tree)
+    #animate_video(shot, camera, time, frames, efit_tree)
+    slide_frames(shot, camera, time, frames, efit_tree)
 
 
 if __name__ == '__main__':
