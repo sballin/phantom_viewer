@@ -35,11 +35,11 @@ Code adapted from [synergetics/spectrum](https://github.com/synergetics/spectrum
 
 Example data: the quadratic phase coupling problem, a 64x64 array in which each column contains an independent realization (timeseries) of a signal. From the power spectrum we see that there are four waves with frequency .1, .15, .25, and .4 Hz:
 
-![](quad_ps.png)
+![](resources/quad_ps.png)
 
 In order to assert that the energy from two waves produces a third, they must be both frequency-coupled (f_1 + f_2 = f_3) and phase-coupled (theta_1 + theta_2 = theta_3). The bicoherence analysis tells us there is frequency- and phase-coupling for all but the wave at .4 Hz, but doesn't say anything about the direction of energy transfer: 
 
-![](quad_bicoh.png)
+![](resources/quad_bicoh.png)
 
 This plot is redundant, and we can get all the information we need (for auto-bicoherence) from the triangle with bottom left corner at (0, 0), top corner at max(f2), and bottom right corner at max(f1).
 
