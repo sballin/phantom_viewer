@@ -142,8 +142,8 @@ def bicoherence(y, time_step, nfft=None, wind=None, nsamp=None, overlap=None, di
     cont = plt.contourf(waxis,waxis,bic,100, cmap=plt.cm.Spectral_r)
     plt.colorbar(cont)
     plt.title('Bicoherence estimated via the direct (FFT) method')
-    plt.xlabel('f1')
-    plt.ylabel('f2')
+    plt.xlabel('f1 (Hz)')
+    plt.ylabel('f2 (Hz)')
     plt.show()
 
   return (bic, waxis)

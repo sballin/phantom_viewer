@@ -2,14 +2,39 @@ Signal tools
 ============
 
 
-GPI analysis
-------------
+GPI bicoherence
+---------------
 
 File: `analyze_gpi.py` using `signals.py` and `bicoherence.py`
 
-Signals analyzed: sums of pixel fluctuations in each red square (fourth is barely visible due to red background).
+Signals analyzed: sums of pixel fluctuations in shot 1150528015 before and after the L-H transition around 0.615 seconds (matching power spectra below).
 
-Windowed FFT with tiny error bars corresponding to standard error between power spectra for each window. For equal-length portions of the timeseries before and after the L-H transition around 0.615 seconds, around 24 Hanning-weighted windows with 50% overlap were used:
+Before L-H transition, 16 records of length 256:
+
+![](resources/bicoh_before.png)
+
+After L-H transition, 16 records of length 256:
+
+![](resources/bicoh_after.png)
+
+After L-H transition, 64 records of length 256:
+
+![](resources/bicoh_after_long.png)
+
+__Danger:__ 
+- Tradeoff between number of records to average and resolution of FFT, which is related to the length of each record
+- Make sure frequency calculation using time step is correct
+- Possibly use `scipy.signal.periodogram` instead of direct FFT and frequency calculations
+
+
+GPI power spectra
+-----------------
+
+File: `analyze_gpi.py` using `signals.py`
+
+Signals analyzed: sums of pixel fluctuations in each red square (fourth is barely visible due to red background) for shot 1150528015, before and after the L-H transition around 0.615 seconds.
+
+Windowed FFT with tiny error bars corresponding to standard error between power spectra for each window. For equal-length portions of the timeseries before and after the L-H transition, around 24 Hanning-weighted windows with 50% overlap were used:
 
 ![](resources/pspectra.jpg)
 
@@ -17,15 +42,6 @@ __Less danger:__
 - Using `scipy.signal.welch` instead of custom windowed FFT code
 - Calculations of total power from signal variance and non-windowed power spectrum agree up to 8 decimal places with linear detrend over entire timeseries
 - Windowed power spectrum results in significantly different total power (same order of magnitude at least), but is pretty close to result from variance of signal detrended along a similar number of windows
-
-Bicoherence analysis for each square:
-
-![](resources/bispecs.png)
-
-__Danger:__ 
-- Tradeoff between number of records to average and resolution of FFT, which is related to the length of each record
-- Make sure frequency calculation using time step is correct
-- Possibly use `scipy.signal.periodogram` instead of direct FFT and frequency calculations
 
 
 Bicoherence

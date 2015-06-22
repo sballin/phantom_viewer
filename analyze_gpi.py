@@ -85,6 +85,7 @@ def PS_analysis(shot, camera, frames, centers):
 
 def bicoh_analysis(shot, camera, frames, centers):
     time = gpi.get_gpi_series(shot, camera, 'time')
+    time_step = (time[-1]-time[0])/len(time)
     
     bicohs = []
     for (x, y) in centers:
@@ -92,16 +93,11 @@ def bicoh_analysis(shot, camera, frames, centers):
         region = surrounding_pixels(x, y, 5)
         for p in region:
             pixel += frames[:, p[0], p[1]] 
-    
-        after_transition = gpi.find_nearest(time, .61601)
-        pixel = pixel[after_transition:]
-        time = time[after_transition:]
      
-        pixel = np.array(pixel[:128*128]).reshape(32, 512) # truncate
+        pixel = np.array(pixel[:128*128]).reshape(64, 256) # truncate
         pixel = np.swapaxes(pixel, 0, 1)
     
-        time_step = (time[-1]-time[0])/len(time)
-        bicohs.append(bicoherence.bicoherence(pixel, time_step, nfft=1024, disp=False))
+        bicohs.append(bicoherence.bicoherence(pixel, time_step, nfft=256, disp=False))
     
     plt.figure()
     i = 1
@@ -109,8 +105,8 @@ def bicoh_analysis(shot, camera, frames, centers):
         plt.subplot(2, 2, i)
         plt.title('point %d' % i)
         i += 1
-        plt.xlabel('f1')
-        plt.ylabel('f2')
+        plt.xlabel('f1 (Hz)')
+        plt.ylabel('f2 (Hz)')
         cont = plt.contourf(waxis, waxis, abs(bicoh), 100, cmap=plt.cm.Spectral_r)
         plt.colorbar(cont)
     
@@ -122,23 +118,14 @@ shot = 1150528015
 camera = 'phantom2'
 #frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
 centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
-#bicoh_analysis(shot, camera, frames, centers)
 #PS_analysis(shot, camera, frames, centers)
 
-# This is the procedure to change the number of records
-qpc = np.swapaxes(scipy.io.loadmat('qpc.mat')['zmat'], 0, 1)
-qpc = qpc[:32]
-qpc = np.swapaxes(qpc, 0, 1)
-bicoherence.bicoherence(qpc, 1, disp=True)
+time = gpi.get_gpi_series(shot, camera, 'time')
+before_transition = gpi.find_nearest(time, .61329)
+frames_before = frames[:before_transition]
+#bicoh_analysis(shot, camera, frames_before, centers)
 
-# This shows the power spectra for the quadratic phase coupling problem
-qpc = np.swapaxes(qpc, 0, 1)
-freqs, ps = scipy.signal.periodogram(qpc[1])
-for i in range(qpc.shape[1]):
-    ps += scipy.signal.periodogram(qpc[i])[1] 
-plt.figure()
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Magnitude')
-plt.plot(freqs, ps)
-plt.show()
-
+after_transition = gpi.find_nearest(time, .61601)
+frames_after = frames[after_transition:after_transition+frames_before.size]
+bicoh_analysis(shot, camera, frames_after, centers)
+ 
