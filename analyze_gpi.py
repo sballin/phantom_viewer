@@ -55,7 +55,7 @@ def PS_analysis(shot, camera, frames, centers):
         freqs_before, PS_before = scipy.signal.welch(pixel_before, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_before.size/segs), detrend='linear', scaling='spectrum')
         freqs_after, PS_after = scipy.signal.welch(pixel_after, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_after.size/segs), detrend='linear', scaling='spectrum')
 
-        print x, y
+        print 'Point', x, y
         signals.power_analysis(pixel_before, PS_before)
         signals.power_analysis(pixel_after, PS_after)
     
@@ -120,8 +120,25 @@ def bicoh_analysis(shot, camera, frames, centers):
  
 shot = 1150528015   
 camera = 'phantom2'
-frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
+#frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
 centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
 #bicoh_analysis(shot, camera, frames, centers)
-PS_analysis(shot, camera, frames, centers)
- 
+#PS_analysis(shot, camera, frames, centers)
+
+# This is the procedure to change the number of records
+qpc = np.swapaxes(scipy.io.loadmat('qpc.mat')['zmat'], 0, 1)
+qpc = qpc[:32]
+qpc = np.swapaxes(qpc, 0, 1)
+bicoherence.bicoherence(qpc, 1, disp=True)
+
+# This shows the power spectra for the quadratic phase coupling problem
+qpc = np.swapaxes(qpc, 0, 1)
+freqs, ps = scipy.signal.periodogram(qpc[1])
+for i in range(qpc.shape[1]):
+    ps += scipy.signal.periodogram(qpc[i])[1] 
+plt.figure()
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Magnitude')
+plt.plot(freqs, ps)
+plt.show()
+

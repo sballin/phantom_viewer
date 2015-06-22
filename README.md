@@ -23,10 +23,25 @@ Bicoherence analysis for each square:
 ![](resources/bispecs.png)
 
 __Danger:__ 
-- Make sure the axis along which data is read corresponds to continuous slices of the timeseries, not every other Nth element in the timeseries
 - Tradeoff between number of records to average and resolution of FFT, which is related to the length of each record
 - Make sure frequency calculation using time step is correct
 - Possibly use `scipy.signal.periodogram` instead of direct FFT and frequency calculations
+
+
+Bicoherence
+-----------
+
+Code adapted from [synergetics/spectrum](https://github.com/synergetics/spectrum).
+
+Example data: the quadratic phase coupling problem, a 64x64 array in which each column contains an independent realization (timeseries) of a signal. From the power spectrum we see that there are four waves with frequency .1, .15, .25, and .4 Hz:
+
+![](quad_ps.png)
+
+In order to assert that the energy from two waves produces a third, they must be both frequency-coupled (f_1 + f_2 = f_3) and phase-coupled (theta_1 + theta_2 = theta_3). The bicoherence analysis tells us there is frequency- and phase-coupling for all but the wave at .4 Hz, but doesn't say anything about the direction of energy transfer: 
+
+![](quad_bicoh.png)
+
+This plot is redundant, and we can get all the information we need (for auto-bicoherence) from the triangle with bottom left corner at (0, 0), top corner at max(f2), and bottom right corner at max(f1).
 
 
 GPI video viewer
