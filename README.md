@@ -79,7 +79,11 @@ File: `vid_view.py`
 
 View video from any camera for a shot. `raspi2` could be useful for an overview of the x-point, shown here for shot 1150528015:
 
-![](resources/raspi2.png)
+![](resources/raspi2.gif)
+
+And a wider view of the same shot:
+
+![](resources/wide2.gif)
 
 
 Total power test

@@ -6,6 +6,8 @@ from matplotlib.widgets import Slider, Button
 import matplotlib.gridspec as gridspec
 import numpy as np
 import signals
+from scipy.misc import imsave
+import os
 
 
 def get_frames(shot):
@@ -38,10 +40,18 @@ def animate_video(frames):
     plt.show()
 
 
+def output_gif(frames):
+    for i, frame in enumerate(frames):
+        imsave('outframe_%05d.png' % i, frame)
+    os.system('convert outframe_*.png -layers optimize out.gif')
+    os.system('rm outframe_*.png')
+
+
 # Cziegler: 1101209014 with apd_array 
-#shot = int(sys.argv[1])
-#frames = get_frames(shot)
+shot = int(sys.argv[1])
+frames = get_frames(shot)[:, ::-1, :]
 #animate_video(frames)
-tree = MDSplus.Tree('spectroscopy', 1150528015)
-series = tree.getNode('video_daq.matrox3.camera_2').data()
-animate_video(series)
+tree = MDSplus.Tree('spectroscopy', shot)
+#series = tree.getNode('video_daq.matrox3.camera_2').data()
+#animate_video(series)
+output_gif(frames)
