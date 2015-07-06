@@ -1,6 +1,53 @@
 Signal tools
 ============
 
+Pixel correlation 
+-----------------
+
+Total signal for pixel (30, 30) over part of shot 1150611004:
+
+![](resources/pixel_t_hist.png)
+
+Part analyzed (no big trends):
+
+![](resources/inner2048.png)
+
+-1 to 1 normalized correlations between 5 pixels over above interval (dashed lines are autocorrelations, all 1.0 at 0 frames lag):
+
+![](resources/corrs_inner2048.png)
+
+0-lag correlation using Sobel-filtered frames:
+
+![](x30_y30_i912_edge.png)
+
+0-lag correlation using 5-frame average subtracted frames:
+
+![](x30_y30_i912.png)
+
+21-frame lag correlation (close to distance between peaks in signal) using 5-frame average subtracted frames:
+
+![](x30_y30_i21.png)
+
+
+Sobel filter
+------------
+
+File: `analyze_gpi.py`
+
+![](resources/phantom2.gif)
+
+Shown is a Sobel filter applied to the 5-frame average subtracted X-point GPI data for shot 1150611004. 
+
+
+Geometry
+--------
+
+File: `cross_section.py`
+
+![](resources/filaments.png)
+
+Field lines conjured by IDL code were superimposed by hand on filaments for various frames.
+
 
 GPI bicoherence
 ---------------
