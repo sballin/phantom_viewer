@@ -24,7 +24,7 @@ Part analyzed (no big trends):
 
 0-lag correlation using 5-frame average subtracted frames:
 
-![](x30_y30_i912.png)
+![](resources/x30_y30_i912.png)
 
 21-frame lag correlation (close to distance between peaks in signal) using 5-frame average subtracted frames:
 
