@@ -4,6 +4,8 @@ Signal tools
 Pixel correlation 
 -----------------
 
+File: `analyze_gpi.py`
+
 Total signal for pixel (30, 30) over part of shot 1150611004:
 
 ![](resources/pixel_t_hist.png)
@@ -18,7 +20,7 @@ Part analyzed (no big trends):
 
 0-lag correlation using Sobel-filtered frames:
 
-![](x30_y30_i912_edge.png)
+![](resources/x30_y30_i912_edge.png)
 
 0-lag correlation using 5-frame average subtracted frames:
 
@@ -26,7 +28,7 @@ Part analyzed (no big trends):
 
 21-frame lag correlation (close to distance between peaks in signal) using 5-frame average subtracted frames:
 
-![](x30_y30_i21.png)
+![](resources/x30_y30_i21.png)
 
 
 Sobel filter
