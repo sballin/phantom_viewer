@@ -6,6 +6,16 @@ import scipy
 
 
 def PS_error(signal, nperseg=256, noverlap=None):
+    """
+    Get standard deviation of power spectra calculated from data in a set of
+    Hanning windows with linear detrend.
+    Parameters
+        signal: NumPy array, signal to analyze
+        nperseg: number of data points per window
+        noverlap: overlap of segments, half of nperseg if not provided
+    Returns
+        NumPy array: standard error of the mean over Hanning windows
+    """
     x = np.arange(signal.size)
     if not noverlap: noverlap = nperseg//2
     step = nperseg - noverlap
@@ -21,6 +31,9 @@ def PS_error(signal, nperseg=256, noverlap=None):
 
 
 def power_analysis(signal, PS):
+    """
+    Calculate power by intergrating power spectrum and using variance of signal.
+    """
     pspower = np.sqrt(np.sum(PS))
     varpower = np.sqrt(np.var(scipy.signal.detrend(signal, type='linear', bp=[i*signal.size//8 for i in range(8)] + [signal.size])))
     print 'Power from PS: 1/N*sqrt(sum(PS(signal)))\t= ', pspower

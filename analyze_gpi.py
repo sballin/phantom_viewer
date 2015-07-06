@@ -12,10 +12,20 @@ import norm_xcorr
 
 
 def pixel_history(frames, x, y):
+    """
+    Return time history for a specified pixel.
+    Parameters
+        frames: NumPy array of dimension (frame count, y pixels, x pixels)
+    """
     return np.take(np.take(frames, x, axis=1), y, axis=1)
 
 
 def surrounding_pixels(x, y, side):
+    """
+    Return array of (x, y) pairs surrounding pixel at (x, y).
+    Parameters
+        side: length of box around pixel
+    """
     pixels = set()
     range = np.arange(-side/2 + 1, side/2 + 1)
     for xi in range: 
@@ -24,7 +34,13 @@ def surrounding_pixels(x, y, side):
 
 
 def show_region(frames, region):
-    first_frame = np.zeros((64, 64))
+    """
+    Display set of pixels used on top of the first frame.
+    Parameters
+        frames: NumPy array of dimension (frame count, y pixels, x pixels)
+        region: array of (x, y) tuples specifying used pixels
+    """
+    first_frame = np.zeros((frames.shape[1], frames.shape[2]))
     first_frame = frames[0].astype(float)
     for pixel in region:
         first_frame[pixel[0], pixel[1]] = np.nan
@@ -37,7 +53,10 @@ def show_region(frames, region):
     #plt.show()
 
 
-def PS_analysis(shot, camera, frames, centers, efit_tree):
+def PS_analysis(shot, camera, frames, centers):
+    """
+    Display signal and power series for centers specified.
+    """
     time = gpi.get_gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
     print 1./time_step
@@ -54,22 +73,6 @@ def PS_analysis(shot, camera, frames, centers, efit_tree):
         print 'Point', x, y
         print 'FFT window length: %d' % winlen
         signals.power_analysis(pixel, PS)
-        
-#        efit_times = efit_tree.getTimeBase()
-#        rlcfs = efit_tree.getRLCFS()
-#        zlcfs = efit_tree.getZLCFS()
-#        efit_t_index = find_nearest(efit_times, time[0])
-#        extents = get_extents(shot, camera)
-#        gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
-#        fig, ax = plt.subplots()
-#        plt.subplots_adjust(bottom=0.25)
-#        plt.subplot(gs[0])
-#        im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.cm.gray)
-#        l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
-#        plt.scatter(*zip(*get_frame_corners(shot, camera)), color='r')
-#        plt.xlim(extents[0:2])
-#        plt.ylim(extents[2:4])
-
 
         plt.figure()
         plt.subplot2grid((2, 2), (0,0))
@@ -94,6 +97,10 @@ def PS_analysis(shot, camera, frames, centers, efit_tree):
     
 
 def split_PS_analysis(shot, camera, frames, centers):
+    """
+    Compare power spectra before and after a certain time for pixels in the
+    given centers.
+    """
     time = gpi.get_gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
     
@@ -236,7 +243,7 @@ if __name__ == '__main__':
     #subs = gpi.subtract_average(frames, 5)
     #corr_frame(subs[22500:24325], (30, 30))
     
-    #PS_analysis(shot, camera, frames, centers, efit_tree)
+    #PS_analysis(shot, camera, frames, centers)
     t_hists = gpi.get_gpi_series(shot, camera, 't_hists')
     time = gpi.get_gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
