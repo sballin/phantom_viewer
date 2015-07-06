@@ -152,6 +152,6 @@ def bicoherence(y, time_step, nfft=None, wind=None, nsamp=None, overlap=None, di
 
 
 def demo():
-  qpc = scipy.io.loadmat('qpc.mat')['zmat']
+  qpc = scipy.io.loadmat('resources/qpc.mat')['zmat']
   bicoherence(qpc, 1., disp=True)
 
