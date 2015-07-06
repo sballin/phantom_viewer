@@ -89,7 +89,7 @@ And a wider view of the same shot:
 Total power test
 ----------------
 
-File: `fourier_ps.py`
+File: `examples/fourier_ps.py`
 
 Calculations of total power from the power spectrum and the variance of the signal agree:
 
@@ -115,7 +115,7 @@ Calculations of total power from the power spectrum and the variance of the sign
 Cross-power spectrum
 --------------------
 
-File: `cross_power.py`
+File: `examples/cross_power.py`
 
 Cross-power spectrum of sine waves with frequency 3 and 7 Hz:
 
@@ -125,7 +125,7 @@ Cross-power spectrum of sine waves with frequency 3 and 7 Hz:
 FFT autocorrelation 
 -------------------
 
-File: `fft_a_corr.py`
+File: `examples/fft_a_corr.py`
 
 ![](http://mathworld.wolfram.com/images/equations/FourierTransform/NumberedEquation3.gif)
 
@@ -141,7 +141,7 @@ Faster than direct autocorrelation and seems accurate, although not normalized.
 Direct autocorrelation 
 ----------------------
 
-File: `a_corr.py`
+File: `examples/a_corr.py`
 
 Autocorrelation computed directly. Output for `sin(2*pi*10*x) + noise`:
 
