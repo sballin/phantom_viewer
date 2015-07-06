@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from scipy.linalg import hankel
+import scipy.signal
 import scipy.io as sio
 import matplotlib.pyplot as plt
 import os
@@ -111,16 +112,17 @@ def bicoherence(y, time_step, nfft=None, wind=None, nsamp=None, overlap=None, di
 
   for k in xrange(nrecs):
     ys = y[ind]
-    ys = (ys.reshape(1,-1) - np.mean(ys)) * wind
+    #ys = (ys.reshape(1,-1)-np.mean(ys))*wind
+    ys = scipy.signal.detrend(ys).reshape(1,-1)*wind
 
     Yf = np.fft.fft(ys, nfft)/nsamp
     CYf = np.conjugate(Yf)
-    Pyy = Pyy + flat_eq(Pyy, (Yf*CYf))
+    Pyy += flat_eq(Pyy, (Yf*CYf))
 
     Yf12 = flat_eq(Yf12, CYf.ravel(order='F')[mask])
 
-    bic = bic + ((Yf * np.transpose(Yf)) * Yf12)
-    ind = ind + int(nadvance)
+    bic += ((Yf * np.transpose(Yf)) * Yf12)
+    ind += int(nadvance)
 
 
   bic = bic / nrecs
@@ -139,12 +141,17 @@ def bicoherence(y, time_step, nfft=None, wind=None, nsamp=None, overlap=None, di
   print 'Max: bic('+str(waxis[col])+','+str(waxis[col])+') = '+str(maxval)
 
   if disp:
-    cont = plt.contourf(waxis,waxis,bic,100, cmap=plt.cm.Spectral_r)
-    plt.colorbar(cont)
+    cont = plt.contourf(waxis, waxis, bic, 100, cmap=plt.cm.Spectral_r, vmin=0, vmax=1)
+    plt.colorbar()
     plt.title('Bicoherence estimated via the direct (FFT) method')
     plt.xlabel('f1 (Hz)')
     plt.ylabel('f2 (Hz)')
     plt.show()
 
   return (bic, waxis)
+
+
+def demo():
+  qpc = scipy.io.loadmat('qpc.mat')['zmat']
+  bicoherence(qpc, 1., disp=True)
 
