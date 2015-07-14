@@ -2,6 +2,7 @@ import sys
 import MDSplus
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
+import matplotlib.mlab 
 import numpy as np
 import signals
 import eqtools
@@ -53,7 +54,7 @@ def show_region(frames, region):
     #plt.show()
 
 
-def PS_analysis(shot, camera, frames, centers):
+def PS_analysis(shot, camera, frames, centers, radius):
     """
     Display signal and power series for centers specified.
     """
@@ -63,7 +64,7 @@ def PS_analysis(shot, camera, frames, centers):
     
     for (x, y) in centers:
         pixel = np.zeros(frames.shape[0])
-        region = surrounding_pixels(x, y, 5)
+        region = surrounding_pixels(x, y, radius)
         for p in region:
             pixel += frames[:, p[0], p[1]] 
     
@@ -188,18 +189,7 @@ def bicoh_analysis(shot, camera, frames, centers):
     plt.show()
 
 
-def edge_filter(frames):
-    """
-    Apply a Sobel filter to the given frames.
-    """
-    for i in xrange(len(frames)):
-        sx = scipy.ndimage.sobel(frames[i], axis=0, mode='constant')
-        sy = scipy.ndimage.sobel(frames[i], axis=1, mode='constant')
-        frames[i] = np.hypot(sx, sy)
-    return frames 
-
-
-def corr_lag(t_hists, time):
+def corr_lag(t_hists, time, nofft=False):
     """
     For the given pixel time histories, plot correlations as a function of
     frame lag.
@@ -209,15 +199,20 @@ def corr_lag(t_hists, time):
     plt.figure()
     for i in range(len(t_hists)):
         for j in range(len(t_hists)):
-            xcorr = norm_xcorr.norm_xcorr(t_hists[i], t_hists[j])
-            if i == j: plt.plot(np.arange(-frame_count/2, frame_count/2), xcorr, '--')
-            else: plt.plot(np.arange(-frame_count/2, frame_count/2), xcorr)
+            if nofft: xcorr = [signals.cross_correlation(t_hists[i], t_hists[j], 
+                               lag=f) for f in np.arange(0, 100)] 
+            else: xcorr = norm_xcorr.norm_xcorr(t_hists[i], t_hists[j]) 
+            if i < j: 
+                new = xcorr[len(xcorr)/2:len(xcorr)/2+41] 
+                plt.plot(np.arange(0, 41), new)
+                plt.annotate('%s %s' % (i, j), xy=(np.argmax(new), np.max(new))) 
+                #plt.plot(np.arange(-frame_count/2, frame_count/2), xcorr)
     plt.xlabel('Lag')
     plt.ylabel('Magnitude')
     plt.show()
     
 
-def corr_frame(frames, pixel):
+def corr_frame(frames, pixel, nofft=False):
     """
     Compute the -1 to 1 normalized cross-correlation between a given pixel and all 
     other pixels in the frame over the length of the video. Display a color plot of
@@ -225,13 +220,24 @@ def corr_frame(frames, pixel):
     """
     ref = frames[:, pixel[0], pixel[1]]
     #freqs, _ = signals.csd(ref, ref, return_onesided=True, detrend='linear')
-    corr = np.zeros(frames.shape)
+    if nofft: corr = np.zeros((10, 64, 64))
+    else: corr = np.zeros(frames.shape)
     for i in range(64):
         for j in range(64):
-            corr[:, i, j] = norm_xcorr.norm_xcorr(ref, frames[:, i, j]) 
+            if nofft: corr[:, i, j] = [signals.cross_correlation(ref, frames[:, i, j], lag=f) for f in np.arange(0, 10)] 
+            else: corr[:, i, j] = norm_xcorr.norm_xcorr(ref, frames[:, i, j]) 
         print i
     gpi.slide_corr(corr, pixel)
 
+
+def t_hist_specgram(t_hist, time):
+    time_step = (time[-1]-time[0])/len(time)
+    plt.figure()
+    plt.specgram(t_hist, NFFT=256, Fs=1./time_step)
+    plt.xlabel('Time (s)'); plt.ylabel('Frequency (Hz)')
+    plt.xlim([0, time[-1]-time[0]])
+    plt.show()
+ 
 
 if __name__ == '__main__':
     shot = 1150611004 #1150528015  #1150611004 
@@ -239,27 +245,23 @@ if __name__ == '__main__':
     #frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
     centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
     
-    #eframes = edge_filter(subs)
+    #eframes = gpi.edge_filter(subs)
     #subs = gpi.subtract_average(frames, 5)
-    #corr_frame(subs[22500:24325], (30, 30))
     
-    #PS_analysis(shot, camera, frames, centers)
-    t_hists = gpi.get_gpi_series(shot, camera, 't_hists')
+    PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
+    t_hists = gpi.get_gpi_series(shot, camera, 't_hists')[:, :4]
     time = gpi.get_gpi_series(shot, camera, 'time')
-    time_step = (time[-1]-time[0])/len(time)
-    #corr_lag(t_hists[22500:24325], time)
+
+    corr_frame(eframes[22500:24325], (8, 9))
+    corr_lag(t_hists[22500:24325], time)
+    t_hist_specgram(t_hists.swapaxes(0, 1)[0], time)
     
-    #signal = np.array(signal[:256*128]).reshape(128, 256) # truncate
-    #signal = np.swapaxes(signal, 0, 1)
-    #bicoherence.bicoherence(signal, 1., nfft=256, disp=False)
-    
-    #bicoh_analysis(shot, camera, frames, centers)
-    
-    time = gpi.get_gpi_series(shot, camera, 'time')
-    before_transition = gpi.find_nearest(time, .61329)
-    frames_before = frames[:before_transition]
+    # Analyze before/after L-H transition in shot 1150528015
+    #time = gpi.get_gpi_series(shot, camera, 'time')
+    #before_transition = gpi.find_nearest(time, .61329)
+    #frames_before = frames[:before_transition]
     #bicoh_analysis(shot, camera, frames_before, centers)
-    after_transition = gpi.find_nearest(time, .61601)
-    frames_after = frames[after_transition:after_transition+frames_before.size]
+    #after_transition = gpi.find_nearest(time, .61601)
+    #frames_after = frames[after_transition:after_transition+frames_before.size]
     #bicoh_analysis(shot, camera, frames_after, centers)
      

@@ -5,6 +5,16 @@ import matplotlib.pyplot as plt
 import scipy
 
 
+def cross_correlation(a, b, lag=0):
+    a_mean = a.mean(); b_mean = b.mean()
+    a_fluct = a - a_mean; b_fluct = b - b_mean
+    denom = np.sqrt(np.sum(a_fluct**2)*np.sum(b_fluct**2))
+    if denom == 0: return 0
+    if lag == 0: return np.sum(a_fluct*b_fluct)/denom 
+    elif lag < 0: return np.sum((a[-lag:] - a_mean)*(b[:lag] - b_mean))/denom
+    elif lag > 0: return np.sum((a[:-lag] - a_mean)*(b[lag:] - b_mean))/denom
+
+
 def PS_error(signal, nperseg=256, noverlap=None):
     """
     Get standard deviation of power spectra calculated from data in a set of

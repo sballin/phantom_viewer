@@ -8,7 +8,7 @@ import numpy as np
 import signals
 import eqtools
 import scipy
-
+import scipy.ndimage
 
 def get_gpi_series(shot, camera, series_name):
     """
@@ -97,6 +97,26 @@ def subtract_average(frames, interval):
     remainder = frames.shape[0] % interval 
     if remainder != 0: frames = frames[:-remainder]
     return frames - average_frames(frames, interval)
+
+
+def edge_filter(frames):
+    """
+    Apply a Sobel filter to the given frames.
+    """
+    for i in xrange(len(frames)):
+        sx = scipy.ndimage.sobel(frames[i], axis=0, mode='constant')
+        sy = scipy.ndimage.sobel(frames[i], axis=1, mode='constant')
+        frames[i] = np.hypot(sx, sy)
+    return frames 
+
+
+def kill_sobel_edges(frames):
+    """
+    Set edges of sobel-filtered frames to constant, average values.
+    """
+    frames[:, :, 0] = np.ones((frames.shape[0], frames.shape[1]))*frames.mean()
+    frames[:, 0, :] = np.ones((frames.shape[0], frames.shape[1]))*frames.mean()
+    return frames
 
 
 def sum_frames(frames):
@@ -244,7 +264,7 @@ def animate_video(shot, camera, time, frames):
         im.set_data(frames[0])
         efit_t_index = find_nearest(efit_times, time[0])
         #c.set_array(psirz[efit_t_index])
-        c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
+        #c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[0])
@@ -255,7 +275,7 @@ def animate_video(shot, camera, time, frames):
         im.set_array(frames[i])
         efit_t_index = find_nearest(efit_times, i/float(frame_count)*(time[-1]-time[0]) + time[0])
         #c.set_array(psirz[efit_t_index])
-        c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
+        #c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[i])
@@ -264,7 +284,7 @@ def animate_video(shot, camera, time, frames):
     
     dim = frames.shape
     anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=dim[0], interval=0, blit=True)
+                                   frames=dim[0], interval=50, blit=True)
     plt.tight_layout(pad=1)
     plt.show()
 
@@ -286,6 +306,9 @@ def slide_corr(frames, pixel):
     im = plt.imshow(frames[0], origin='bottom', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
     circ = plt.Circle(pixel[::-1], radius=1, edgecolor='r', fill=False)
     ax.add_patch(circ)
+    t_hists_r = get_gpi_series(1150611004, 'phantom2', 'hist_xpix')
+    t_hists_z = get_gpi_series(1150611004, 'phantom2', 'hist_ypix')
+    for pos in zip(t_hists_r, t_hists_z): ax.add_patch(plt.Circle(pos, radius=1, edgecolor='b', fill=False))
     plt.colorbar()
     plt.title('Correlation for pixel (%d, %d)' % pixel)
     plt.xlabel('Pixel y coordinate')
@@ -446,11 +469,12 @@ def slide_frames(shot, camera, time, frames):
 if __name__ == '__main__':
     # Cziegler: 1101209014 with apd_array 
     shot = 1150611004 #1150528015   
-    camera = 'phantom2' # try phantom
+    camera = 'phantom' # try phantom
     time = get_gpi_series(shot, camera, 'time')
     frames = flip_horizontal(get_gpi_series(shot, camera, 'frames'))
-    frames = subtract_average(frames, 5)
+    subs = subtract_average(frames, 5)
+    eframes = kill_sobel_edges(edge_filter(subs))
 
-    animate_video(shot, camera, time, frames)
-    #slide_frames(shot, camera, time, frames)
+    animate_video(shot, camera, time, eframes)
+    #slide_frames(shot, camera, time, eframes)
 
