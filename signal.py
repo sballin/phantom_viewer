@@ -1,8 +1,7 @@
 from __future__ import division
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy
+import warnings
 
 
 def cross_correlation(a, b, lag=0):

@@ -1,11 +1,10 @@
 from scipy.io.idl import readsav
 import numpy as np
-import norm_xcorr
-import cross_section
-import gpi
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
-import signals
+from matplotlib.widgets import Slider
+import acquire
+import signal
+import view
 
 
 def mark_filament(base, overlay):
@@ -24,12 +23,13 @@ fls = sav.fl_image
 #frames = gpi.flip_horizontal(gpi.get_gpi_series(1150611004, 'phantom2', 'frames'))
 #frames = gpi.edge_filter(gpi.subtract_average(frames[:2048], 5))
 #frames = gpi.kill_sobel_edges(frames)
+subs = acquire.video(shot, camera, sub=5, sobel=True)
 frames = subs[:2048]
 
 gpi_index = 1028
 xcorrs = np.zeros(fls.shape[0])
 for i, fl in enumerate(fls):
-    xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
+    xcorrs[i] = signal.cross_correlation(frames[gpi_index], fl) 
 indices = np.argsort(xcorrs)
 
 fl_r = []; fl_z = []
@@ -37,13 +37,13 @@ noframes = 256
 for j, frame in enumerate(frames[:noframes]):
     xcorrs = np.zeros(fls.shape[0])
     for i, fl in enumerate(fls):
-        xcorrs[i] = signals.cross_correlation(frame, fl) 
+        xcorrs[i] = signal.cross_correlation(frame, fl) 
     indices = np.argsort(xcorrs)
     r = sav.fieldline_r[indices[-1]]; z = sav.fieldline_z[indices[-1]]
     fl_r.append(r); fl_z.append(z)
     if not j % 10: print j, '/', noframes
 
-cross_section.plot_field_lines(fl_r, fl_z)
+view.plot_field_lines(fl_r, fl_z)
 
 #plt.figure(); plt.plot(xcorrs); plt.show()
 
@@ -64,7 +64,7 @@ def update_base(val):
     global gpi_index; global indices
     gpi_index = val
     for i, fl in enumerate(fls):
-        xcorrs[i] = signals.cross_correlation(frames[val], fl) 
+        xcorrs[i] = signal.cross_correlation(frames[val], fl) 
     indices = np.argsort(xcorrs)
     update_overlay(-1)
 

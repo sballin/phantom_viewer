@@ -2,9 +2,8 @@ from __future__ import division
 import numpy as np
 from scipy.linalg import hankel
 import scipy.signal
-import scipy.io as sio
+import scipy.io 
 import matplotlib.pyplot as plt
-import os
 
 
 def flat_eq(x, y):

@@ -1,15 +1,11 @@
-import sys
-import MDSplus
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
 import matplotlib.mlab 
 import numpy as np
-import signals
-import eqtools
-import gpi
+import signal
 import scipy
 import bicoherence
-import norm_xcorr
+import acquire
+import process
 
 
 def pixel_history(frames, x, y):
@@ -58,7 +54,7 @@ def PS_analysis(shot, camera, frames, centers, radius):
     """
     Display signal and power series for centers specified.
     """
-    time = gpi.get_gpi_series(shot, camera, 'time')
+    time = acquire.gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
     print 1./time_step
     
@@ -73,7 +69,7 @@ def PS_analysis(shot, camera, frames, centers, radius):
 
         print 'Point', x, y
         print 'FFT window length: %d' % winlen
-        signals.power_analysis(pixel, PS)
+        signal.power_analysis(pixel, PS)
 
         plt.figure()
         plt.subplot2grid((2, 2), (0,0))
@@ -87,7 +83,7 @@ def PS_analysis(shot, camera, frames, centers, radius):
         plt.title('Power spectrum for points around (%s, %s)' % (x, y))
         plt.semilogy(freqs, PS, 'b-')
         #plt.xscale('log')
-        error = signals.PS_error(pixel, nperseg=winlen)
+        error = signal.PS_error(pixel, nperseg=winlen)
         plt.fill_between(freqs, PS-error, PS+error, color='b', alpha=.5)
         plt.ylabel('Magnitude')
         plt.xlabel('Frequency (Hz)')
@@ -102,7 +98,7 @@ def split_PS_analysis(shot, camera, frames, centers):
     Compare power spectra before and after a certain time for pixels in the
     given centers.
     """
-    time = gpi.get_gpi_series(shot, camera, 'time')
+    time = acquire.gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
     
     for (x, y) in centers:
@@ -111,11 +107,11 @@ def split_PS_analysis(shot, camera, frames, centers):
         for p in region:
             pixel += frames[:, p[0], p[1]] 
     
-        before_transition = gpi.find_nearest(time, .61329)
+        before_transition = process.find_nearest(time, .61329)
         pixel_before = pixel[:before_transition]
         time_before = time[:before_transition]
         
-        after_transition = gpi.find_nearest(time, .61601)
+        after_transition = process.find_nearest(time, .61601)
         pixel_after = pixel[after_transition:after_transition+time_before.size]
         time_after = time[after_transition:after_transition+time_before.size]
         
@@ -124,8 +120,8 @@ def split_PS_analysis(shot, camera, frames, centers):
         freqs_after, PS_after = scipy.signal.welch(pixel_after, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_after.size/segs), detrend='linear', scaling='spectrum')
 
         print 'Point', x, y
-        signals.power_analysis(pixel_before, PS_before)
-        signals.power_analysis(pixel_after, PS_after)
+        signal.power_analysis(pixel_before, PS_before)
+        signal.power_analysis(pixel_after, PS_after)
     
         plt.figure()
         plt.subplot2grid((2, 2), (0,0))
@@ -138,8 +134,8 @@ def split_PS_analysis(shot, camera, frames, centers):
         plt.title('Power spectrum for points around (%s, %s)' % (x, y))
         plt.semilogy(freqs_after, PS_after, 'r-', label='after')
         plt.semilogy(freqs_before, PS_before, 'b-', label='before')
-        error_before = signals.PS_error(pixel_before, nperseg=bicoherence.nextpow2(pixel_before.size/segs))
-        error_after = signals.PS_error(pixel_after, nperseg=bicoherence.nextpow2(pixel_after.size/segs))
+        error_before = signal.PS_error(pixel_before, nperseg=bicoherence.nextpow2(pixel_before.size/segs))
+        error_after = signal.PS_error(pixel_after, nperseg=bicoherence.nextpow2(pixel_after.size/segs))
         plt.fill_between(freqs_before, PS_before-error_before, PS_before+error_before, color='b', alpha=.5)
         plt.fill_between(freqs_after, PS_after-error_after, PS_after+error_after, color='r', alpha=.5)
         plt.legend()
@@ -155,7 +151,7 @@ def bicoh_analysis(shot, camera, frames, centers):
     """
     Perform a bicoherence analysis of pixels around the given centers.
     """
-    time = gpi.get_gpi_series(shot, camera, 'time')
+    time = acquire.gpi_series(shot, camera, 'time')
     time_step = (time[-1]-time[0])/len(time)
     
     bicohs = []
@@ -189,47 +185,6 @@ def bicoh_analysis(shot, camera, frames, centers):
     plt.show()
 
 
-def corr_lag(t_hists, time, nofft=False):
-    """
-    For the given pixel time histories, plot correlations as a function of
-    frame lag.
-    """
-    t_hists = t_hists.swapaxes(0, 1)
-    frame_count = t_hists.shape[1]
-    plt.figure()
-    for i in range(len(t_hists)):
-        for j in range(len(t_hists)):
-            if nofft: xcorr = [signals.cross_correlation(t_hists[i], t_hists[j], 
-                               lag=f) for f in np.arange(0, 100)] 
-            else: xcorr = norm_xcorr.norm_xcorr(t_hists[i], t_hists[j]) 
-            if i < j: 
-                new = xcorr[len(xcorr)/2:len(xcorr)/2+41] 
-                plt.plot(np.arange(0, 41), new)
-                plt.annotate('%s %s' % (i, j), xy=(np.argmax(new), np.max(new))) 
-                #plt.plot(np.arange(-frame_count/2, frame_count/2), xcorr)
-    plt.xlabel('Lag')
-    plt.ylabel('Magnitude')
-    plt.show()
-    
-
-def corr_frame(frames, pixel, nofft=False):
-    """
-    Compute the -1 to 1 normalized cross-correlation between a given pixel and all 
-    other pixels in the frame over the length of the video. Display a color plot of
-    the correlations for a certain lag and indicate the pixel used.
-    """
-    ref = frames[:, pixel[0], pixel[1]]
-    #freqs, _ = signals.csd(ref, ref, return_onesided=True, detrend='linear')
-    if nofft: corr = np.zeros((10, 64, 64))
-    else: corr = np.zeros(frames.shape)
-    for i in range(64):
-        for j in range(64):
-            if nofft: corr[:, i, j] = [signals.cross_correlation(ref, frames[:, i, j], lag=f) for f in np.arange(0, 10)] 
-            else: corr[:, i, j] = norm_xcorr.norm_xcorr(ref, frames[:, i, j]) 
-        print i
-    gpi.slide_corr(corr, pixel)
-
-
 def t_hist_specgram(t_hist, time):
     time_step = (time[-1]-time[0])/len(time)
     plt.figure()
@@ -240,28 +195,22 @@ def t_hist_specgram(t_hist, time):
  
 
 if __name__ == '__main__':
-    shot = 1150611004 #1150528015  #1150611004 
+    shot = 1150611004 #1150528015
     camera = 'phantom2'
-    #frames = gpi.flip_horizontal(gpi.get_gpi_series(shot, camera, 'frames'))
-    centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
+    frames = acquire.video(shot, camera, sub=5, sobel=True)
     
-    #eframes = gpi.edge_filter(subs)
-    #subs = gpi.subtract_average(frames, 5)
-    
-    PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
-    t_hists = gpi.get_gpi_series(shot, camera, 't_hists')[:, :4]
-    time = gpi.get_gpi_series(shot, camera, 'time')
-
-    corr_frame(eframes[22500:24325], (8, 9))
-    corr_lag(t_hists[22500:24325], time)
+    #PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
+    t_hists = acquire.gpi_series(shot, camera, 't_hists')[:, :4]
+    time = acquire.gpi_series(shot, camera, 'time')
     t_hist_specgram(t_hists.swapaxes(0, 1)[0], time)
     
     # Analyze before/after L-H transition in shot 1150528015
-    #time = gpi.get_gpi_series(shot, camera, 'time')
-    #before_transition = gpi.find_nearest(time, .61329)
+    #centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
+    #time = acquire.gpi_series(shot, camera, 'time')
+    #before_transition = process.find_nearest(time, .61329)
     #frames_before = frames[:before_transition]
     #bicoh_analysis(shot, camera, frames_before, centers)
-    #after_transition = gpi.find_nearest(time, .61601)
+    #after_transition = process.find_nearest(time, .61601)
     #frames_after = frames[after_transition:after_transition+frames_before.size]
     #bicoh_analysis(shot, camera, frames_after, centers)
      
