@@ -3,6 +3,7 @@ import MDSplus
 import numpy as np
 import process
 import scipy
+import eqtools
 
 
 class Database:
@@ -117,6 +118,16 @@ def extents(shot, camera):
     return [rmin, rmax, zmin, zmax]
 
 
+def x_pt_r_z(shot):
+    """
+    Return (R, Z) coordinate tuples of the lower X-point in m.
+    """
+    tree = MDSplus.Tree('analysis', shot)
+    rseps = np.array(tree.getNode('efit.results.a_eqdsk.rseps').data())/100.
+    zseps = np.array(tree.getNode('efit.results.a_eqdsk.zseps').data())/100.
+    return rseps[:, 0], zseps[:, 0]
+                                   
+
 def psi_contours(shot):
     """
     Get contours of magnetic flux interpolated over a grid.
@@ -136,4 +147,20 @@ def psi_contours(shot):
         psinew[i, :, :] = f(rnew, znew) 
     extent = [np.min(rgrid), np.max(rgrid), np.min(zgrid), np.max(zgrid)]
     return psinew, extent
+
+
+def rlcfs(shot):
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    return efit_tree.getRLCFS()
+
+
+def zlcfs(shot):
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    return efit_tree.getZLCFS()
+
+
+def machine_cross_section():
+    efit_tree = eqtools.CModEFIT.CModEFITTree(1150611004)
+    machine_x, machine_y = efit_tree.getMachineCrossSectionFull()
+    return machine_x, machine_y
 

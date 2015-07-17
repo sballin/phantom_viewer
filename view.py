@@ -1,3 +1,4 @@
+import sys
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.widgets import Slider, Button
@@ -8,7 +9,7 @@ import acquire
 import process
 
 
-def animate_video(shot, camera, sub=5, sobel=True):
+def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     """
     Animate frames while displaying last closed flux surface and relevant plots.
     Parameters
@@ -17,6 +18,7 @@ def animate_video(shot, camera, sub=5, sobel=True):
                 'phantom2' (X-point GPI)
         sub: number of frames to use in average subtraction
         frames: whether to apply a Sobel filter
+        interval: time between frames in ms
     """
     # Get time and frames
     time = acquire.gpi_series(shot, camera, 'time')
@@ -89,12 +91,12 @@ def animate_video(shot, camera, sub=5, sobel=True):
     
     dim = frames.shape
     anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=dim[0], interval=50, blit=True)
+                                   frames=dim[0], interval=interval, blit=True)
     plt.tight_layout(pad=1)
     plt.show()
 
 
-def slide_frames(shot, camera, sub=5, sobel=True):
+def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
     """
     Slide through GPI frames while displaying last closed flux surface and 
     relevant timeseries plots.
@@ -251,18 +253,16 @@ def output_gif(frames):
     os.system('rm outframe_*.png')
 
 
-def plot_field_lines(fl_r, fl_z):
-    efit_tree = eqtools.CModEFIT.CModEFITTree(1150611004)
-    efit_times = efit_tree.getTimeBase()
-    rlcfs = efit_tree.getRLCFS()
-    zlcfs = efit_tree.getZLCFS()
-    machine_x, machine_y = efit_tree.getMachineCrossSectionFull()
-    corners = gpi.get_frame_corners(1150611004, 'phantom2')
+def plot_field_lines(shot, fl_r, fl_z):
+    rlcfs = acquire.rlcfs(shot)
+    zlcfs = acquire.zlcfs(shot)
+    machine_x, machine_y = acquire.machine_cross_section()
+    corners = acquire.frame_corners(shot, 'phantom2')
     corners_r, corners_z = [c[0] for c in corners], [c[1] for c in corners]
     
     plt.figure()
     plt.plot(fl_r, fl_z, 'b.')
-    plt.plot(rlcfs[80], zlcfs[80], 'r-')
+    plt.plot(rlcfs[60], zlcfs[60], 'r-')
     plt.plot(machine_x, machine_y, color='gray')
     plt.plot(1.020, -.265, 'go')
     plt.plot(corners_r, corners_z, 'go')
@@ -275,7 +275,7 @@ def plot_field_lines(fl_r, fl_z):
     plt.show()
     
 
-def slide_corr(frames, pixel):
+def slide_corr(frames, pixel, other_pixels=None):
     """
     Display correlation values for a pixel with a slider for lag time.
     Parameters
@@ -292,8 +292,12 @@ def slide_corr(frames, pixel):
     im = plt.imshow(frames[0], origin='bottom', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
     circ = plt.Circle(pixel[::-1], radius=1, edgecolor='r', fill=False)
     ax.add_patch(circ)
-    t_hists_r = acquire.gpi_series(1150611004, 'phantom2', 'hist_xpix')
-    t_hists_z = acquire.gpi_series(1150611004, 'phantom2', 'hist_ypix')
+    if other_pixels: 
+        t_hists_r = [o[0] for o in other_pixels]
+        t_hists_z = [o[1] for o in other_pixels]
+    else:
+        t_hists_r = acquire.gpi_series(1150611004, 'phantom2', 'hist_xpix')
+        t_hists_z = acquire.gpi_series(1150611004, 'phantom2', 'hist_ypix')
     for pos in zip(t_hists_r, t_hists_z): ax.add_patch(plt.Circle(pos, radius=1, edgecolor='b', fill=False))
     plt.colorbar()
     plt.title('Correlation for pixel (%d, %d)' % pixel)
@@ -344,5 +348,5 @@ if __name__ == '__main__':
     # Cziegler: 1101209014 with apd_array 
     shot = 1150528015   
     camera = 'phantom2' 
-    animate_video(shot, camera, sub=0, sobel=False)
+    animate_video(1150715004, camera, sub=5, sobel=False)
 

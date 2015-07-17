@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.mlab 
 import numpy as np
-import signal
+import signals
 import scipy
 import bicoherence
 import acquire
@@ -69,7 +69,7 @@ def PS_analysis(shot, camera, frames, centers, radius):
 
         print 'Point', x, y
         print 'FFT window length: %d' % winlen
-        signal.power_analysis(pixel, PS)
+        signals.power_analysis(pixel, PS)
 
         plt.figure()
         plt.subplot2grid((2, 2), (0,0))
@@ -83,7 +83,7 @@ def PS_analysis(shot, camera, frames, centers, radius):
         plt.title('Power spectrum for points around (%s, %s)' % (x, y))
         plt.semilogy(freqs, PS, 'b-')
         #plt.xscale('log')
-        error = signal.PS_error(pixel, nperseg=winlen)
+        error = signals.PS_error(pixel, nperseg=winlen)
         plt.fill_between(freqs, PS-error, PS+error, color='b', alpha=.5)
         plt.ylabel('Magnitude')
         plt.xlabel('Frequency (Hz)')
@@ -120,8 +120,8 @@ def split_PS_analysis(shot, camera, frames, centers):
         freqs_after, PS_after = scipy.signal.welch(pixel_after, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_after.size/segs), detrend='linear', scaling='spectrum')
 
         print 'Point', x, y
-        signal.power_analysis(pixel_before, PS_before)
-        signal.power_analysis(pixel_after, PS_after)
+        signals.power_analysis(pixel_before, PS_before)
+        signals.power_analysis(pixel_after, PS_after)
     
         plt.figure()
         plt.subplot2grid((2, 2), (0,0))
@@ -134,8 +134,8 @@ def split_PS_analysis(shot, camera, frames, centers):
         plt.title('Power spectrum for points around (%s, %s)' % (x, y))
         plt.semilogy(freqs_after, PS_after, 'r-', label='after')
         plt.semilogy(freqs_before, PS_before, 'b-', label='before')
-        error_before = signal.PS_error(pixel_before, nperseg=bicoherence.nextpow2(pixel_before.size/segs))
-        error_after = signal.PS_error(pixel_after, nperseg=bicoherence.nextpow2(pixel_after.size/segs))
+        error_before = signals.PS_error(pixel_before, nperseg=bicoherence.nextpow2(pixel_before.size/segs))
+        error_after = signals.PS_error(pixel_after, nperseg=bicoherence.nextpow2(pixel_after.size/segs))
         plt.fill_between(freqs_before, PS_before-error_before, PS_before+error_before, color='b', alpha=.5)
         plt.fill_between(freqs_after, PS_after-error_after, PS_after+error_after, color='r', alpha=.5)
         plt.legend()
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     camera = 'phantom2'
     frames = acquire.video(shot, camera, sub=5, sobel=True)
     
-    #PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
+    PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
     t_hists = acquire.gpi_series(shot, camera, 't_hists')[:, :4]
     time = acquire.gpi_series(shot, camera, 'time')
     t_hist_specgram(t_hists.swapaxes(0, 1)[0], time)
