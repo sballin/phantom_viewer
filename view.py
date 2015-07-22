@@ -17,7 +17,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
         camera: string e.g. 'phantom' (outboard midplange GPI),
                 'phantom2' (X-point GPI)
         sub: number of frames to use in average subtraction
-        frames: whether to apply a Sobel filter
+        sobel: whether to apply a Sobel filter
         interval: time between frames in ms
     """
     # Get time and frames
@@ -42,7 +42,6 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
-    print im, l, c
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
     plt.xlim(gpi_extent[0:2])
     plt.ylim(gpi_extent[2:4])
@@ -55,7 +54,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     vl1 = plt.axvline(time[0], color='r')
     plt.ylabel('Units?')
     plt.xlim([time[0], time[-1]])
-    plt.ylim([0, 3])
+    plt.ylim([0, np.max([s for i, s in enumerate(ha2) if time[0] < time_ha2[i] < time[-1]])])
 
     # Line average density plot
     time_dens, dens = process.time_crop(acquire.time_dens(shot), time)
@@ -157,7 +156,11 @@ def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
     slider.valfmt = '%d'
     playbutton_area = plt.axes([0.45, 0.025, 0.1, 0.04])
     playbutton = Button(playbutton_area, 'Play')
-
+    forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
+    forward_button = Button(forward_button_area, '>')
+    back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
+    back_button = Button(back_button_area, '<')
+ 
     curr_frame = 0
 
     def update(val):
@@ -185,7 +188,7 @@ def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[curr_frame])
         vl2.set_xdata(time[curr_frame])
-        for i in xrange(curr_frame, curr_frame + 100, 2): 
+        for i in xrange(curr_frame, curr_frame + 100, 1): 
             slider.set_val(i)
             vl1.set_xdata(time[i])
             vl2.set_xdata(time[i])
@@ -202,23 +205,37 @@ def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
     
     def play(event):
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=frame_count, interval=0, blit=False)
+                                       frames=frame_count, interval=50, blit=False)
 
+    def forward(event):
+        global curr_frame
+        curr_frame += 1
+        slider.set_val(curr_frame)
+        update(curr_frame)
+
+    def backward(event):
+        global curr_frame
+        curr_frame -= 1
+        slider.set_val(curr_frame)
+        update(curr_frame)
+ 
     playbutton.on_clicked(play)
+    forward_button.on_clicked(forward)
+    back_button.on_clicked(backward)
     plt.show()
 
 
-def animate_simple(shot, camera, cmap=plt.cm.gray, disp=True, save=False):
+def animate_frames(frames, cmap=plt.cm.gray, disp=True, save=False, interval=50):
     """
-    Animate the given frames.
+    Animate given frames.
     Parameters
-        shot: int, shot number
-        camera: string e.g. 'raspi2'
+        frames: NumPy array of correlations with dimension (no. lags, x pixels,
+                y pixels)
         cmap: colormap e.g. plt.cm.hot, plt.cm.RdBu_r
         disp: whether to display animated figure
         save: whether to save animated figure to 'out.gif'
+        interval: time interval between frames in ms
     """
-    frames = acquire.video(shot, camera)
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
     im = plt.imshow(frames[0], origin='lower', cmap=cmap)
@@ -234,9 +251,24 @@ def animate_simple(shot, camera, cmap=plt.cm.gray, disp=True, save=False):
     plt.axis('off')
     plt.tight_layout(pad=0, rect=(0, 0, 1, 1))
     anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=frames.shape[0], interval=0, blit=True)
+                                   frames=frames.shape[0], interval=interval, blit=False)
     if disp: plt.show()
     if save: anim.save('out.gif', writer='imagemagick', fps=20)
+
+
+def animate_simple(shot, camera, cmap=plt.cm.gray, disp=True, save=False, interval=50):
+    """
+    Animate frames for the given shot and camera.
+    Parameters
+        shot: int, shot number
+        camera: string e.g. 'raspi2'
+        cmap: colormap e.g. plt.cm.hot, plt.cm.RdBu_r
+        disp: whether to display animated figure
+        save: whether to save animated figure to 'out.gif'
+        interval: time interval between frames in ms
+    """
+    frames = acquire.video(shot, camera)
+    animate_frames(frames, cmap=cmap, disp=disp, save=save, interval=interval)
 
 
 def output_gif(frames):
@@ -289,7 +321,7 @@ def slide_corr(frames, pixel, other_pixels=None):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plt.subplots_adjust(bottom=0.25)
-    im = plt.imshow(frames[0], origin='bottom', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
+    im = plt.imshow(frames[frame_count/2], origin='bottom', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
     circ = plt.Circle(pixel[::-1], radius=1, edgecolor='r', fill=False)
     ax.add_patch(circ)
     if other_pixels: 
@@ -306,7 +338,7 @@ def slide_corr(frames, pixel, other_pixels=None):
 
     # Slider and button settings
     slide_area = plt.axes([0.10, 0.1, 0.65, 0.03])
-    slider = Slider(slide_area, 'Frame', 0, frame_count, valinit=0)
+    slider = Slider(slide_area, 'Lag', -frame_count/2, frame_count/2, valinit=0)
     slider.drawon = True
     slider.valfmt = '%d'
     playbutton_area = plt.axes([0.45, 0.025, 0.1, 0.04])
@@ -316,10 +348,10 @@ def slide_corr(frames, pixel, other_pixels=None):
 
     def update(val):
         global curr_frame
-        curr_frame = val 
+        curr_frame = val + frame_count/2
         slider.valtext.set_text('%d' % val)
-        if val < frame_count: 
-            im.set_array(frames[val])
+        if curr_frame < frame_count: 
+            im.set_array(frames[curr_frame])
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
@@ -346,7 +378,7 @@ def slide_corr(frames, pixel, other_pixels=None):
 
 if __name__ == '__main__':
     # Cziegler: 1101209014 with apd_array 
-    shot = 1150528015   
+    shot = 1150717011
     camera = 'phantom2' 
-    animate_video(1150715004, camera, sub=5, sobel=False)
+    slide_frames(shot, camera, sub=5, sobel=False)
 

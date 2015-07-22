@@ -9,6 +9,9 @@ import eqtools
 class Database:
     vids = dict()
 
+    def purge(self):
+        for key in self.vids.keys(): del(self.vids[key])
+
 
 def video(shot, camera, sub=0, sobel=False): 
     key = str(shot) + camera
