@@ -95,7 +95,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     plt.show()
 
 
-def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
+def slide_frames(shot, camera, sub=5, sobel=True, show_X=False, interval=50):
     """
     Slide through GPI frames while displaying last closed flux surface and 
     relevant timeseries plots.
@@ -205,7 +205,7 @@ def slide_frames(shot, camera, sub=5, sobel=True, show_X=False):
     
     def play(event):
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=frame_count, interval=50, blit=False)
+                                       frames=frame_count, interval=interval, blit=False)
 
     def forward(event):
         global curr_frame
@@ -360,7 +360,7 @@ def slide_corr(frames, pixel, other_pixels=None):
         global curr_frame
         curr_frame = int(curr_frame)
         im.set_data(frames[curr_frame])
-        for i in xrange(curr_frame, curr_frame + 100, 2): 
+        for i in xrange(curr_frame, curr_frame + 200, 2): 
             slider.set_val(i)
         return [im]
 
@@ -378,7 +378,13 @@ def slide_corr(frames, pixel, other_pixels=None):
 
 if __name__ == '__main__':
     # Cziegler: 1101209014 with apd_array 
-    shot = 1150717011
+    shot = 1150724011
     camera = 'phantom2' 
-    slide_frames(shot, camera, sub=5, sobel=False)
+
+    H_modes_old = [1150724011, 1150717011, 1150623031, 1150623029, 1150623028, 1150623015, 1150623008, 1150623006]
+    H_modes = [1150618018, 1150612019, 1150611024, 1150610024, 1150610011, 1150529003, 1150528017]
+    bad = 1150618002, 1150612032
+    for shot in H_modes:
+        slide_frames(shot, camera, sub=0, sobel=False, interval=20)
+        acquire.Database().purge()
 

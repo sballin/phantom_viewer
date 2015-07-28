@@ -49,13 +49,17 @@ def average_frames(frames, interval):
         NumPy array: repeated averages [a a a... b b b... c c c... d d d...] 
                      for each [interval] frames supplied
     """
-    dim = frames.shape
-    # Average for every [interval] frames, length = frame_count/interval
-    avg_count = dim[0]/interval
-    avg = np.mean(frames.reshape(interval, avg_count, dim[1], dim[2]), axis=0) 
-    # Averages [a b c d] => [a a a... b b b... c c c... d d d...] 
-    return np.array([[avg[i] for j in xrange(interval)] for i in 
-                     xrange(avg_count)]).reshape(dim)
+    frame_count = frames.shape[0]
+    halfint = interval/2
+    averages = np.zeros(frames.shape)
+    for i in range(frame_count):
+        if i < halfint:
+            averages[i] = np.mean(frames[:interval], axis=0)
+        elif frame_count - i < halfint:
+            averages[i] = np.mean(frames[-interval:], axis=0)
+        else:
+            averages[i] = np.mean(frames[i-halfint:i+halfint], axis=0)
+    return averages
 
 
 def subtract_average(frames, interval):

@@ -5,6 +5,7 @@ import acquire
 import view
 import norm_xcorr
 from tqdm import *
+import scipy.signal
 
 
 def corr_frame(frames, pixel, nofft=False, other_pixels=None, show_maxes=False):
@@ -32,7 +33,7 @@ def corr_frame(frames, pixel, nofft=False, other_pixels=None, show_maxes=False):
         plt.show()
     
         plt.figure(); plt.title('Maximum correlations')
-        plt.imshow(max_lags, origin='bottom'); plt.colorbar(label='Lag (frames)')
+        plt.imshow(max_lags, origin='bottom', vmin=-75, vmax=75); plt.colorbar(label='Lag (frames)')
         plt.show()
 
     view.slide_corr(corr, pixel, other_pixels=other_pixels)
@@ -73,16 +74,27 @@ def corr_plot_custom(frames, pixel, other_pixels):
 
 
 if __name__ == '__main__':
-    shot = 1150611004 #1150528015 
+    shot = 1150722015 #1150611004 #1150528015 
     camera = 'phantom2'
-    frames = acquire.video(shot, camera, sub=5, sobel=False)
+
+    frames = acquire.video(shot, camera, sub=0, sobel=False)
     t_hists = acquire.gpi_series(shot, camera, 't_hists')#[:, :4]
     time = acquire.gpi_series(shot, camera, 'time')
 
-    custom_pixels = [(32, i) for i in reversed(xrange(4, 29, 3))]
-    #corr_plot_custom(frames, (32, 32), custom_pixels)
+    # Pixels along divider
+    #custom_pixels = [(15, 35), (25, 34), (35, 30), (44, 24), (51, 20), (58, 13)] 
+    # Pixels along blob field line
+    #custom_pixels = [(15, 35), (23, 31), (30, 26), (33, 21), (36, 14), (37, 8), (35, 2)]
+    # Pixels descending vertically in middle
+    #custom_pixels = [(32, i) for i in reversed(xrange(4, 29, 3))]
+
+    #corr_plot_custom(frames, (35, 5), custom_pixels)
+
     #corr_plot(t_hists[22500:24325], 1, time, nofft=True)
+
     time_step = (time[-1]-time[0])/len(time)
-    signals.ps_explorer(frames[22500:24325, 14, 10], time_step)
-    #corr_frame(frames[22500:24325], (32, 32), other_pixels=custom_pixels, show_maxes=True)
+    plt.figure(); plt.plot(time, frames[:, 14, 10]); plt.show()
+    signals.ps_explorer(frames[:, 14, 10], time_step)
+
+    #corr_frame(frames[22500:24325], (35, 5), other_pixels=custom_pixels)
  

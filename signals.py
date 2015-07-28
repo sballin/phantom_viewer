@@ -1,37 +1,17 @@
 from __future__ import division
 import numpy as np
 import scipy
+import scipy.signal
 import warnings
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 
 
 def ps_explorer(series, time_step):
-    freqs, PS = scipy.signal.welch(series, nperseg=256, detrend='linear', scaling='spectrum', fs=1./time_step)
-    # Initial plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    plt.subplots_adjust(bottom=0.25)
-    #p, = plt.plot(freqs, PS)
-    for i in range(7, 13):
+    plt.figure()
+    for i in range(8, 13):
         freqs, PS = scipy.signal.welch(series, nperseg=2**i, detrend='linear', scaling='spectrum', fs=1./time_step)
         plt.plot(freqs, PS)
-    plt.show()
-
-
-    # Slider and button settings
-    slide_area = plt.axes([0.10, 0.1, 0.65, 0.03])
-    slider = Slider(slide_area, 'nperseg', 7, 12, valinit=7)
-    slider.drawon = True
-    slider.valfmt = '2**%d'
-
-    def update(val):
-        freqs, PS = scipy.signal.welch(series, nperseg=2**val, detrend='linear', scaling='spectrum', fs=1./time_step)
-        p.set_xdata(freqs); p.set_ydata(PS)
-        #slider.valtext.set_text('%d' % val)
-        fig.canvas.draw_idle()
-
-    slider.on_changed(update)
     plt.show()
 
 

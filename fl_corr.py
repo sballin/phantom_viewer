@@ -63,8 +63,7 @@ def plot_fl_slider(shot, sav):
     """
     fls = sav.fl_image
     fl_r = sav.fieldline_r; fl_z = sav.fieldline_z
-    subs = acquire.video(shot, 'phantom2', sub=5, sobel=False)
-    frames = subs[:2048]
+    frames = acquire.video(shot, 'phantom2', sub=5, sobel=False)
     gpi_index = 1028
     xcorrs = np.zeros(fls.shape[0])
     for i, fl in enumerate(fls):
@@ -136,11 +135,11 @@ def plot_fl_slider(shot, sav):
         
 
 if __name__ == '__main__':
-    shot = 1150611004
+    shot = 1150717011
     #show_x_pt_fl(shot)
     
     # Get field line projection images
-    sav = readsav('/usr/local/cmod/codes/spectroscopy/ir/FLIR/fl_images_1150611004.sav')
+    sav = readsav('fl_images_%s.sav' % shot)
     fls = sav.fl_image
     #fls_cross_section_plot(sav)
     plot_fl_slider(shot, sav)
