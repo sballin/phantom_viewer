@@ -13,7 +13,7 @@ class Database:
         for key in self.vids.keys(): del(self.vids[key])
 
 
-def video(shot, camera, sub=0, sobel=False): 
+def video(shot, camera, sub=0, gauss=3, sobel=False): 
     key = str(shot) + camera
     try: out = Database().vids[key]
     except KeyError: 
@@ -30,7 +30,8 @@ def video(shot, camera, sub=0, sobel=False):
         key += 'sobel'
         try: out = Database().vids[key] 
         except KeyError: 
-            out = Database().vids[key] = process.kill_sobel_edges(process.sobel(np.copy(out)))
+            out = Database().vids[key] \
+                = process.kill_sobel_edges(process.sobel(np.copy(out), gauss=gauss))
     return out
 
 

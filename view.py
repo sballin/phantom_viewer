@@ -9,7 +9,7 @@ import acquire
 import process
 
 
-def animate_video(shot, camera, sub=5, sobel=True, interval=0):
+def animate_video(shot, camera, sub=5, gauss=3, sobel=True, interval=0):
     """
     Animate frames while displaying last closed flux surface and relevant plots.
     Parameters
@@ -22,7 +22,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     """
     # Get time and frames
     time = acquire.gpi_series(shot, camera, 'time')
-    frames = acquire.video(shot, camera, sub=sub, sobel=sobel)
+    frames = acquire.video(shot, camera, sub=sub, gauss=gauss, sobel=sobel)
     frame_count = frames.shape[0]
 
     # LCFS data gathering
@@ -39,7 +39,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
     ax0 = plt.subplot(gs[0])
-    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray)
+    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray, interpolation='nearest')
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
@@ -95,7 +95,7 @@ def animate_video(shot, camera, sub=5, sobel=True, interval=0):
     plt.show()
 
 
-def slide_frames(shot, camera, sub=5, sobel=True, show_X=False, interval=50):
+def slide_frames(shot, camera, sub=5, gauss=3, sobel=True, show_X=False, interval=50):
     """
     Slide through GPI frames while displaying last closed flux surface and 
     relevant timeseries plots.
@@ -107,7 +107,7 @@ def slide_frames(shot, camera, sub=5, sobel=True, show_X=False, interval=50):
         sobel: whether to apply a Sobel filter
     """
     time = acquire.gpi_series(shot, camera, 'time')
-    frames = acquire.video(shot, camera, sub=sub, sobel=sobel)
+    frames = acquire.video(shot, camera, sub=sub, gauss=gauss, sobel=sobel)
     frame_count = frames.shape[0]
 
     # LCFS data gathering
@@ -381,10 +381,9 @@ if __name__ == '__main__':
     shot = 1150724011
     camera = 'phantom2' 
 
-    H_modes_old = [1150724011, 1150717011, 1150623031, 1150623029, 1150623028, 1150623015, 1150623008, 1150623006]
-    H_modes = [1150618018, 1150612019, 1150611024, 1150610024, 1150610011, 1150529003, 1150528017]
+    H_modes = [1150724017, 1150724019, 1150724022]
     bad = 1150618002, 1150612032
     for shot in H_modes:
-        slide_frames(shot, camera, sub=0, sobel=False, interval=20)
+        slide_frames(shot, camera, sub=20, sobel=False, interval=20)
         acquire.Database().purge()
 

@@ -11,7 +11,10 @@ def ps_explorer(series, time_step):
     plt.figure()
     for i in range(8, 13):
         freqs, PS = scipy.signal.welch(series, nperseg=2**i, detrend='linear', scaling='spectrum', fs=1./time_step)
-        plt.plot(freqs, PS)
+        plt.plot(freqs, PS, label='%d samples/segment' % (2**i))
+    plt.legend()
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude')
     plt.show()
 
 
