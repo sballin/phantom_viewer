@@ -145,6 +145,12 @@ def split_PS_analysis(shot, camera, frames, centers):
         plt.tight_layout(pad=1)
         
     plt.show()
+
+
+def my_bicoherence(signal, time_step, disp=False):
+        signal = np.array(signal[:128*64]).reshape(128, 64) # truncate
+        signal = np.swapaxes(signal, 0, 1)
+        return bicoherence.bicoherence(signal, time_step, nfft=128, disp=disp)
     
 
 def bicoh_analysis(shot, camera, frames, centers):
@@ -157,15 +163,12 @@ def bicoh_analysis(shot, camera, frames, centers):
     bicohs = []
     for (x, y) in centers:
         pixel = np.zeros(frames.shape[0])
-        region = surrounding_pixels(x, y, 5)
+        region = surrounding_pixels(x, y, 3)
         for p in region:
             pixel += frames[:, p[0], p[1]] 
         pixel = pixel/float(len(region))
-     
-        pixel = np.array(pixel[:128*64]).reshape(128, 64) # truncate
-        pixel = np.swapaxes(pixel, 0, 1)
-    
-        bicohs.append(bicoherence.bicoherence(pixel, time_step, nfft=128, disp=False))
+        
+        bicohs.append(my_bicoherence(pixel, time_step))
     
     plt.figure()
     i = 1
@@ -195,14 +198,16 @@ def t_hist_specgram(t_hist, time):
  
 
 if __name__ == '__main__':
-    shot = 1150611004 #1150528015
+    shot = 1150717011 #1150528015
     camera = 'phantom2'
     frames = acquire.video(shot, camera, sub=5, sobel=True)
-    
-    PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
-    t_hists = acquire.gpi_series(shot, camera, 't_hists')[:, :4]
     time = acquire.gpi_series(shot, camera, 'time')
-    t_hist_specgram(t_hists.swapaxes(0, 1)[0], time)
+    time_step = (time[-1]-time[0])/time.shape[0]
+    my_bicoherence(frames[:, 20, 20], time_step, disp=True)
+    
+    #PS_analysis(shot, 'phantom', frames, [(32, 60)], 1)
+    t_hists = acquire.gpi_series(shot, camera, 't_hists')[:, :4]
+    #t_hist_specgram(t_hists.swapaxes(0, 1)[2], time)
     
     # Analyze before/after L-H transition in shot 1150528015
     #centers = [(54, 32), (40, 50), (10, 32), (32, 10)]

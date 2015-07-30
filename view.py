@@ -1,4 +1,5 @@
 import sys
+import os
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.widgets import Slider, Button
@@ -9,7 +10,7 @@ import acquire
 import process
 
 
-def animate_video(shot, camera, sub=5, gauss=3, sobel=True, interval=0):
+def animate_gpi(shot, camera='phantom2', sub=20, gauss=3, sobel=False, interval=20):
     """
     Animate frames while displaying last closed flux surface and relevant plots.
     Parameters
@@ -40,6 +41,7 @@ def animate_video(shot, camera, sub=5, gauss=3, sobel=True, interval=0):
     plt.subplots_adjust(bottom=0.25)
     ax0 = plt.subplot(gs[0])
     im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray, interpolation='nearest')
+    im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
@@ -48,22 +50,22 @@ def animate_video(shot, camera, sub=5, gauss=3, sobel=True, interval=0):
 
     # H_alpha timeseries plot
     time_ha2, ha2 = acquire.time_ha2(shot)
-    ax1 = plt.subplot(gs[1])#.locator_params(tight=True, nbins=6)
+    ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
     plt.plot(time_ha2, ha2)
     plt.title('H alpha 2')
     vl1 = plt.axvline(time[0], color='r')
-    plt.ylabel('Units?')
+    plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
     plt.ylim([0, np.max([s for i, s in enumerate(ha2) if time[0] < time_ha2[i] < time[-1]])])
 
     # Line average density plot
     time_dens, dens = process.time_crop(acquire.time_dens(shot), time)
-    ax2 = plt.subplot(gs[2])#.locator_params(tight=True, nbins=6)
+    ax2 = plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
     plt.title('Line Average Density')
     plt.plot(time_dens, dens)
     vl2 = plt.axvline(time[0], color='r')
     plt.xlabel('Time (s)')
-    plt.ylabel('Units?')
+    plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
 
     def init():
@@ -95,7 +97,7 @@ def animate_video(shot, camera, sub=5, gauss=3, sobel=True, interval=0):
     plt.show()
 
 
-def slide_frames(shot, camera, sub=5, gauss=3, sobel=True, show_X=False, interval=50):
+def slide_gpi(shot, camera='phantom2', sub=20, gauss=3, sobel=True, interval=20, show_pixel=True):
     """
     Slide through GPI frames while displaying last closed flux surface and 
     relevant timeseries plots.
@@ -121,32 +123,37 @@ def slide_frames(shot, camera, sub=5, gauss=3, sobel=True, show_X=False, interva
     # GPI and LCFS initial plotting
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
     fig, ax = plt.subplots()
-    plt.subplots_adjust(bottom=0.25)
+    plt.subplots_adjust(bottom=0.25, hspace=.43, top=.96)
     plt.subplot(gs[0])
     im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.cm.gray)
+    im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
     plt.xlim(extents[0:2])
     plt.ylim(extents[2:4])
 
-    # H_alpha timeseries plot
-    time_ha2, ha2 = acquire.time_ha2(shot)
-    ax1 = plt.subplot(gs[1])#.locator_params(tight=True, nbins=6)
-    plt.plot(time_ha2, ha2)
-    plt.title('H alpha 2')
+    # H_alpha or pixel timeseries plot
+    ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
+    if show_pixel:
+        plt.title('pixel 32, 32')
+        plt.plot(time, frames[:, 32, 32].swapaxes(0, 1))
+    else: 
+        plt.title('H alpha 2')
+        time_ha2, ha2 = acquire.time_ha2(shot)
+        plt.plot(time_ha2, ha2)
+        plt.ylim([min(ha2), max(ha2)])
     vl1 = plt.axvline(time[0], color='r')
-    plt.ylabel('Units?')
+    plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
-    plt.ylim([0, 3])
 
     # Line average density plot
     time_dens, dens = process.time_crop(acquire.time_dens(shot), time)
-    ax2 = plt.subplot(gs[2])#.locator_params(tight=True, nbins=6)
+    ax2 = plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
     plt.title('Line Average Density')
     plt.plot(time_dens, dens)
     vl2 = plt.axvline(time[0], color='r')
     plt.xlabel('Time (s)')
-    plt.ylabel('Units?')
+    plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
 
     # Slider and button settings
@@ -156,9 +163,9 @@ def slide_frames(shot, camera, sub=5, gauss=3, sobel=True, show_X=False, interva
     slider.valfmt = '%d'
     playbutton_area = plt.axes([0.45, 0.025, 0.1, 0.04])
     playbutton = Button(playbutton_area, 'Play')
-    forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
+    forward_button_area = plt.axes([0.56, 0.05, 0.04, 0.025])
     forward_button = Button(forward_button_area, '>')
-    back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
+    back_button_area = plt.axes([0.56, 0.015, 0.04, 0.025])
     back_button = Button(back_button_area, '<')
  
     curr_frame = 0
@@ -280,7 +287,7 @@ def output_gif(frames):
     """
     frames = frames[:, ::-1, :]
     for i, frame in enumerate(frames):
-        imsave('outframe_%05d.png' % i, frame)
+        plt.imsave('outframe_%05d.png' % i, frame, vmin=frames.min(), vmax=frames.max(), cmap=plt.cm.gray)
     os.system('convert outframe_*.png -layers optimize out.gif')
     os.system('rm outframe_*.png')
 
@@ -379,11 +386,9 @@ def slide_corr(frames, pixel, other_pixels=None):
 if __name__ == '__main__':
     # Cziegler: 1101209014 with apd_array 
     shot = 1150724011
-    camera = 'phantom2' 
 
     H_modes = [1150724017, 1150724019, 1150724022]
-    bad = 1150618002, 1150612032
     for shot in H_modes:
-        slide_frames(shot, camera, sub=20, sobel=False, interval=20)
+        slide_gpi(shot, sub=20, sobel=False, interval=20)
         acquire.Database().purge()
 

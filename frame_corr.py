@@ -74,10 +74,9 @@ def corr_plot_custom(frames, pixel, other_pixels):
 
 
 if __name__ == '__main__':
-    shot = 1150722015 #1150611004 #1150528015 
+    shot = 1150611004 #1150528015 
     camera = 'phantom2'
-
-    frames = acquire.video(shot, camera, sub=0, sobel=False)
+    frames = acquire.video(shot, camera, sub=5)
     t_hists = acquire.gpi_series(shot, camera, 't_hists')#[:, :4]
     time = acquire.gpi_series(shot, camera, 'time')
 
@@ -93,8 +92,7 @@ if __name__ == '__main__':
     #corr_plot(t_hists[22500:24325], 1, time, nofft=True)
 
     time_step = (time[-1]-time[0])/len(time)
-    plt.figure(); plt.plot(time, frames[:, 14, 10]); plt.show()
-    signals.ps_explorer(frames[:, 14, 10], time_step)
+    signals.ps_explorer(frames[:, 10, 10], time_step)
 
     #corr_frame(frames[22500:24325], (35, 5), other_pixels=custom_pixels)
  
