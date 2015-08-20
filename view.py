@@ -442,5 +442,5 @@ def slide_corr(frames, pixel, other_pixels=None):
 
 
 if __name__ == '__main__':
-    slide_gpi(sys.argv[1])
+    slide_gpi(int(sys.argv[1]))
 
