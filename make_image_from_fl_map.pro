@@ -1,7 +1,7 @@
 ;USAGE
 ; .r /usr/local/cmod/codes/spectroscopy/ir/FLIR/make_image_from_fl_map.pro
 
-restore,file='Xpt_view_fieldline_map_1150717011.sav',/verb
+restore,file='Xpt_view_fieldline_map_1150724011.sav',/verb
 n_images=n_elements(fl_map(*).fl_shot)
 fl_image=intarr(64,64,n_images)
 smooth_param=7

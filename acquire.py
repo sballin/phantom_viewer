@@ -4,6 +4,7 @@ import numpy as np
 import process
 import scipy
 import eqtools
+import psutil
 
 
 class Database:
@@ -13,7 +14,11 @@ class Database:
         for key in self.vids.keys(): del(self.vids[key])
 
 
-def video(shot, camera, sub=0, gauss=3, sobel=False): 
+def video(shot, camera, sub=0, blur=0, sobel=False): 
+    if psutil.virtual_memory().percent > 90: 
+        Database().purge()
+        print 'Purged database'
+
     key = str(shot) + camera
     try: out = Database().vids[key]
     except KeyError: 
@@ -26,12 +31,17 @@ def video(shot, camera, sub=0, gauss=3, sobel=False):
         try: out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] = process.subtract_average(out, sub)
+    if blur:
+        key += 'gauss%d' % blur
+        try: out = Database().vids[key] 
+        except KeyError: 
+            out = Database().vids[key] = process.gauss(np.copy(out), blur)
     if sobel: 
         key += 'sobel'
         try: out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] \
-                = process.kill_sobel_edges(process.sobel(np.copy(out), gauss=gauss))
+                = process.kill_sobel_edges(process.sobel(np.copy(out)))
     return out
 
 
@@ -94,6 +104,12 @@ def time_dens(shot):
     tree = MDSplus.Tree('electrons', shot)
     node = tree.getNode('tci.results.nl_04')
     return node.dim_of().data(), np.array(node.data())/.6e20
+
+
+def time_probe(shot):
+    tree = MDSplus.Tree('edge', shot)
+    node = tree.getNode('probes.fmp.id_01.p0.i_slow')
+    return node.dim_of().data(), node.data()
 
 
 def frame_corners(shot, camera):

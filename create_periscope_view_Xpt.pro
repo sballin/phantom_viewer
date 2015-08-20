@@ -279,7 +279,7 @@ if camera_view eq 'X-pt' then begin
    cal_r=[0.51,0.583,0.5825,0.5095]
    cal_z=[-0.355,-0.357,-0.431,-0.429]
    for i=0,n_elements(cal_r)-1 do begin
-      SOL_LC,1150717011,1.0,reform(cal_R(i)),reform(cal_Z(i)),0.5*!pi,0.01,LC,error,phipos=phi_cal,plot=0,/limiters,cr=cr,cz=cz,cphi=cphi
+      SOL_LC,1150724011,1.0,reform(cal_R(i)),reform(cal_Z(i)),0.5*!pi,0.01,LC,error,phipos=phi_cal,plot=0,/limiters,cr=cr,cz=cz,cphi=cphi
 ; now make segments of this field line in the same format as the
 ; machine feature segments. Remember:
 ; XYZseg_CMOD is a [3,120,714] array of XYZ coordinates of tile
@@ -315,7 +315,7 @@ if show_field_line then begin
    fl_shot=1L
 ;;   print,' enter shot #, time, R [m], and Z [m] of the field-line launch point'
 ;;   read, fl_shot,fl_time,fl_R,fl_Z
-   fl_shot=1150717011
+   fl_shot=1150724011
    fl_time=1.0
 ;   fl_r=[.53, .53, .60, .60] ;[0.52,0.57,0.57,0.565]
    n_fl_R=20

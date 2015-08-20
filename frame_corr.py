@@ -47,7 +47,7 @@ def corr_plot(t_hists, ref, time, nofft=False):
     t_hists = t_hists.swapaxes(0, 1)
     frame_count = t_hists.shape[1]
     plt.figure()
-    for j in range(len(t_hists)):
+    for j in xrange(len(t_hists)):
         if nofft: xcorr = [signals.cross_correlation(t_hists[ref], t_hists[j], 
                            lag=f) for f in np.arange(41)] 
         else: 
@@ -62,21 +62,25 @@ def corr_plot_custom(frames, pixel, other_pixels):
     max_lag = 500
     ref = frames[:, pixel[0], pixel[1]]
     plt.figure()
-    for i in trange(len(other_pixels)):
+    for i, _ in enumerate(other_pixels):
         signal = frames[:, other_pixels[i][0], other_pixels[i][1]]
-        xcorr = [signals.cross_correlation(ref, signal, lag=f)
-                 for f in np.arange(-max_lag, max_lag)]
-        plt.plot(np.arange(-max_lag, max_lag), xcorr)
-        plt.axvline()
+        #xcorr = [signals.cross_correlation(ref, signal, lag=f)
+        #         for f in np.arange(-max_lag, max_lag)]
+        b = np.zeros(len(signal)*2)
+        b[len(signal)/2:len(signal)/2+len(signal)] = signal
+        xcorr = scipy.signal.fftconvolve(ref, b[::-1], mode='valid')
+        print xcorr
+        plt.plot(xcorr)
+        plt.axvline(linewidth=.5, c='black')
         plt.annotate(str(i), xy=(np.argmax(xcorr)-max_lag, np.max(xcorr))) 
-    plt.xlabel('Lag'); plt.ylabel('Correlation')
+    plt.xlabel('Lag (frames)'); plt.ylabel('Correlation')
     plt.show()
 
 
 if __name__ == '__main__':
-    shot = 1150611004 #1150528015 
+    shot = 1150724011 #1150528015 
     camera = 'phantom2'
-    frames = acquire.video(shot, camera, sub=5)
+    frames = acquire.video(shot, camera, sub=20)
     t_hists = acquire.gpi_series(shot, camera, 't_hists')#[:, :4]
     time = acquire.gpi_series(shot, camera, 'time')
 
@@ -86,13 +90,15 @@ if __name__ == '__main__':
     #custom_pixels = [(15, 35), (23, 31), (30, 26), (33, 21), (36, 14), (37, 8), (35, 2)]
     # Pixels descending vertically in middle
     #custom_pixels = [(32, i) for i in reversed(xrange(4, 29, 3))]
+    # Pixels horizontally in reading order
+    custom_pixels=[(i, 4) for i in xrange(8, 46, 4)]
+    corr_plot_custom(frames, (4, 4), custom_pixels)
 
-    #corr_plot_custom(frames, (35, 5), custom_pixels)
+    #corr_plot(t_hists[22500:24325], 1, time, nofft=False)
 
-    #corr_plot(t_hists[22500:24325], 1, time, nofft=True)
+    #time_step = (time[-1]-time[0])/len(time)
 
-    time_step = (time[-1]-time[0])/len(time)
-    signals.ps_explorer(frames[:, 10, 10], time_step)
+    #signals.ps_explorer(frames[:, 10, 10], time_step)
 
-    #corr_frame(frames[22500:24325], (35, 5), other_pixels=custom_pixels)
+    #corr_frame(frames[22500:24325], (4, 4), other_pixels=custom_pixels)
  

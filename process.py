@@ -76,12 +76,18 @@ def subtract_average(frames, interval):
     return frames - average_frames(frames, interval)
 
 
-def sobel(frames, gauss=0):
+def gauss(frames, level=3):
+    """
+    Apply a Gaussian filter to the given frames.
+    """
+    return scipy.ndimage.gaussian_filter(frames, level)
+
+
+def sobel(frames):
     """
     Apply a Sobel filter to the given frames.
     """
     for i in xrange(len(frames)):
-        if gauss: frames[i] = scipy.ndimage.gaussian_filter(frames[i], gauss)
         sx = scipy.ndimage.sobel(frames[i], axis=0, mode='constant')
         sy = scipy.ndimage.sobel(frames[i], axis=1, mode='constant')
         frames[i] = np.hypot(sx, sy)
