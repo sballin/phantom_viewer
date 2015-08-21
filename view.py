@@ -236,7 +236,7 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
     back_button.on_clicked(backward)
 
     def filter(label):
-        global frames, curr_frame
+        global frames
         if label == 'Orig': 
             frames = acquire.video(shot, camera)
         elif label == 'Sub 20':
@@ -270,7 +270,10 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
     recolor_button_area = plt.axes([left, bottom-.13, 0.1, 0.04])
     recolor_button = Button(recolor_button_area, 'Recolor')
     recolor_button.on_clicked(recolor)
-    
+
+    # Black magic to fix strange global variable error
+    filter('Orig')
+
     plt.show()
 
 

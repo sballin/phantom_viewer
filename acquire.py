@@ -4,7 +4,6 @@ import numpy as np
 import process
 import scipy
 import eqtools
-import psutil
 
 
 class Database:
@@ -15,10 +14,6 @@ class Database:
 
 
 def video(shot, camera, sub=0, blur=0, sobel=False): 
-    if psutil.virtual_memory().percent > 90: 
-        Database().purge()
-        print 'Purged database'
-
     key = str(shot) + camera
     try: out = Database().vids[key]
     except KeyError: 
