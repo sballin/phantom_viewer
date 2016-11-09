@@ -1,6 +1,9 @@
 import os
 from scipy.io.idl import readsav
 import numpy as np
+import matplotlib
+matplotlib.use('Qt4Agg')
+matplotlib.rcParams['backend.qt4']='PySide'
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 import acquire
@@ -135,12 +138,12 @@ def plot_fl_slider(shot, sav):
         
 
 if __name__ == '__main__':
-    shot = 1150611004 #is the only other one with thin lines
+    shot = 1150717011 #is the only other one with thin lines
     #show_x_pt_fl(shot)
     
     # Get field line projection images
     #sav = readsav('fl_images_%s.sav' % shot)
-    sav = readsav('/usr/local/cmod/codes/spectroscopy/ir/FLIR/fl_images_1150611004.sav')
+    sav = readsav('fl_images_1150717011.sav')
     fls = sav.fl_image
     #fls_cross_section_plot(sav)
     plot_fl_slider(shot, sav)

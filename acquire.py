@@ -25,7 +25,7 @@ def video(shot, camera, sub=0, blur=0, sobel=False):
         key += 'sub%d' % sub
         try: out = Database().vids[key] 
         except KeyError: 
-            out = Database().vids[key] = process.subtract_average(out, sub)
+            out = Database().vids[key] = process.subtract_min(out, sub)
     if blur:
         key += 'gauss%d' % blur
         try: out = Database().vids[key] 

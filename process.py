@@ -76,6 +76,27 @@ def subtract_average(frames, interval):
     return frames - average_frames(frames, interval)
 
 
+def subtract_min(frames, interval):
+    """
+    Subtract running minimum value of each pixel to emphasize fluctuations.
+    Parameters
+        frames: NumPy array with dimension (frame count, y pixels, x pixels)
+        interval: int, number of frames in which to look for min
+    """
+    frame_count = frames.shape[0]
+    halfint = interval/2
+    mins = np.zeros(frames.shape)
+    upper_lim = frame_count - halfint
+    for f in xrange(frame_count):
+        if halfint < f < upper_lim:
+            mins[f] = np.min(frames[f-halfint:f+halfint], axis=0)
+        elif f < halfint:
+            mins[f] = np.min(frames[:interval], axis=0)
+        else:
+            mins[f] = np.min(frames[-interval], axis=0)
+    return frames - mins
+
+
 def gauss(frames, level=3):
     """
     Apply a Gaussian filter to the given frames.

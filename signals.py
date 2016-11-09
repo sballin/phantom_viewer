@@ -5,6 +5,25 @@ import scipy.signal
 import warnings
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
+import acquire
+import norm_xcorr
+
+
+def autocorr_spectrogram(shot, pixel, slice_len):
+    video = acquire.video(shot, 'phantom2', sub=20)
+    frame_count = video.shape[0]
+    pixel_timeseries = video[:, pixel[0], pixel[1]]
+    pixel_timeseries = pixel_timeseries[:frame_count-frame_count%slice_len]
+    pixel_timeseries = pixel_timeseries.reshape((frame_count/slice_len, slice_len))
+    autocorrelations = np.zeros(pixel_timeseries.shape)
+    for i, short_timeseries in enumerate(pixel_timeseries):
+        autocorrelations[i] = norm_xcorr.norm_xcorr(short_timeseries, short_timeseries)
+    plt.figure()
+    plt.imshow(autocorrelations)
+    plt.colorbar()
+    plt.xlabel('Time')
+    plt.ylabel('Frequency')
+    plt.savefig('out.png')
 
 
 def ps_explorer(series, time_step):

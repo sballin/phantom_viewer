@@ -1,5 +1,8 @@
 import sys
 import os
+import matplotlib
+matplotlib.use('Qt4Agg')
+matplotlib.rcParams['backend.qt4']='PySide'
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.widgets import Slider, Button, RadioButtons
@@ -44,7 +47,7 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
     im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray)
     im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
-    c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
+    #c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
     plt.xlim(gpi_extent[0:2])
     plt.ylim(gpi_extent[2:4])
@@ -53,7 +56,7 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
     time_ha2, ha2 = acquire.time_ha2(shot)
     ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
     plt.plot(time_ha2, ha2)
-    plt.title('H alpha 2')
+    plt.title('H-alpha')
     vl1 = plt.axvline(time[0], color='r')
     plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
@@ -78,7 +81,7 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[0])
         vl2.set_xdata(time[0])
-        return [im, l, c, vl1, vl2]
+        return [im, l, vl1, vl2]
     
     def animate(i):
         i *= skip
@@ -90,7 +93,7 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[i])
         vl2.set_xdata(time[i])
-        return [im, l, c, vl1, vl2]
+        return [im, l, vl1, vl2]
     
     dim = frames.shape
     anim = animation.FuncAnimation(fig, animate, init_func=init,
@@ -110,7 +113,7 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
         sub: number of frames to use in average subtraction. 20 works well.
         blur: extent of Gaussian blur, 1, 2, or 3 advisable
         interval: delay in ms between frames during play
-        pixel_t_hist: (x,y) to show time history of that pixel instead of H alpha
+        pixel_t_hist: (x,y) to show time history of that pixel instead of H-alpha
     """
     time = acquire.gpi_series(shot, camera, 'time')
     frames = acquire.video(shot, camera)
@@ -143,16 +146,15 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
         plt.title('Pixel time history')
         plt.plot(time, frames[:, pixel_t_hist[0], pixel_t_hist[1]].swapaxes(0, 1))
     else: 
-        plt.title('H alpha 2')
-        time_ha2, ha2 = acquire.time_ha2(shot)
+        plt.title('H-alpha')
+        time_ha2, ha2 = process.time_crop(acquire.time_ha2(shot), time)
         plt.plot(time_ha2, ha2)
-        plt.ylim([min(ha2), max(ha2)])
     vl1 = plt.axvline(time[0], color='r')
     plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
 
     # Plot line average density 
-    time_dens, dens = process.time_crop(acquire.time_dens(shot),time) 
+    time_dens, dens = process.time_crop(acquire.time_dens(shot), time) 
     ax2 = plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
     plt.title('Line Average Density')
     plt.plot(time_dens, dens)
@@ -239,9 +241,9 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
         global frames
         if label == 'Orig': 
             frames = acquire.video(shot, camera)
-        elif label == 'Sub 20':
+        elif label == 'Sub %d' % sub:
             frames = acquire.video(shot, camera, sub=sub)
-        elif label == 'Blur 3':
+        elif label == 'Blur %d' % blur:
             frames = acquire.video(shot, camera, sub=sub, blur=blur)
         elif label == 'Sobel':
             frames = acquire.video(shot, camera, sub=sub, blur=blur, sobel=True)
@@ -333,9 +335,101 @@ def output_gif(frames):
     """
     frames = frames[:, ::-1, :]
     for i, frame in enumerate(frames):
-        plt.imsave('outframe_%06d.png' % i, frame, vmin=frames.min(), vmax=frames.max(), cmap=plt.cm.gray)
-    os.system('convert outframe_*.png -layers optimize -delay 2/100 out.gif')
-    os.system('rm outframe_*.png')
+        plt.imsave('outframe_%06d.png' % i, frame, vmin=frame.min(), vmax=frame.max(), cmap=plt.cm.hot)
+    os.system('convert outframe_*.png -layers optimize -delay 2/100 out.gif && rm outframe_*.png')
+
+
+def output_vid_frames(frames):
+    frames = frames[:, ::-1, :]
+    os.system('mkdir out ; rm -f out/*')
+    fig = plt.imshow(frames[0])
+    fig.set_cmap('hot')
+    plt.axis('off')
+    for i, frame in enumerate(frames):
+        fig.set_data(frame, vmin=frame.min(), vmax=frame.max())
+        plt.savefig('out/image%05d.png' % i, bbox_inches='tight')
+
+        #plt.imsave('out/image%05d.png' % i, frame, vmin=frame.min(), vmax=frame.max(), cmap=plt.cm.hot)
+
+
+def output_frames(shot, start, end, traces=True):
+    camera = 'phantom2'
+    time = acquire.gpi_series(shot, camera, 'time')
+    if type(start) is int:
+        start_frame = start
+        end_frame = end
+    else:
+        start_frame = process.find_nearest(time, start)
+        end_frame = process.find_nearest(time, end)
+    frames = acquire.video(shot, camera, sub=20) 
+    frame_count = frames.shape[0]
+
+    folder_name = '%s-%d-%d' % (shot, start_frame, end_frame)
+    os.system('mkdir %s' % folder_name)
+
+    if not traces:
+        plt.figure()
+        im = plt.imshow(frames[start_frame], origin='lower', cmap=plt.cm.hot, vmin=0, vmax=130)
+        #plt.axis('off')
+        plt.colorbar()
+        for i in xrange(start_frame, end_frame):
+            im.set_data(frames[i])
+            #im.autoscale()
+            plt.savefig(folder_name + '/frame%05d.png' % i, bbox_inches='tight')
+        return
+
+    # LCFS data gathering
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    efit_times = efit_tree.getTimeBase()
+    rlcfs = efit_tree.getRLCFS()
+    zlcfs = efit_tree.getZLCFS()
+    efit_t_index = process.find_nearest(efit_times, time[0])
+    gpi_extent = acquire.extents(shot, camera)
+
+    # GPI, LCFS initial plotting
+    gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
+    #fig, ax = plt.subplots()
+    fig = plt.figure()
+    plt.subplots_adjust(hspace=.5)
+    #plt.subplots_adjust(bottom=0.25)
+    ax0 = plt.subplot(gs[0])
+    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.hot)
+    im.get_axes().locator_params(nbins=6)
+    l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='c')
+    plt.xlim(gpi_extent[0:2])
+    plt.ylim(gpi_extent[2:4])
+
+    time_ha2, ha2 = acquire.time_ha2(shot)
+    ha_max = np.max([s for i, s in enumerate(ha2) if time[start_frame] < time_ha2[i] < time[end_frame]])
+    ha_min = np.min([s for i, s in enumerate(ha2) if time[start_frame] < time_ha2[i] < time[end_frame]])
+    time_dens, dens = acquire.time_dens(shot)
+    dens_max = np.max(dens)
+    dens_min = np.min(dens)
+
+    for i in xrange(start_frame, end_frame):
+        # H-alpha
+        plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
+        plt.title('H-alpha')
+        plt.plot(time_ha2, ha2)
+        plt.xlim([time[start_frame], time[end_frame]])
+        plt.ylim([ha_min, ha_max])
+        v1 = plt.axvline(time[i], color='r')
+        #plt.ylabel('[Units]')
+        # Line average density
+        plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
+        plt.title('Line Average Density')
+        plt.plot(time_dens, dens)
+        plt.xlim([.5, 1.5])
+        plt.ylim([dens_min, dens_max])
+        plt.xlabel('Time (s)')
+        #plt.ylabel('[Units]')
+        v2 = plt.axvline(time[i], color='r')
+
+        im.set_data(frames[i])
+        im.autoscale()
+        plt.savefig(folder_name + '/frame%05d' % i)
+        v1.remove()
+        v2.remove()
 
 
 def plot_field_lines(shot, fl_r, fl_z):
@@ -360,12 +454,12 @@ def plot_field_lines(shot, fl_r, fl_z):
     
     plt.figure()
     plt.plot(fl_r, fl_z, 'b.')
-    plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
+    plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .007), extent=psiext))
     plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], 'r-')
     plt.plot(machine_x, machine_y, color='gray')
-    plt.plot(1.020, -.265, 'go')
+    #plt.plot(1.020, -.265, 'go')
     #plt.plot(corners_r, corners_z, 'go')
-    plt.annotate('Aperture', (1.020, -.265))
+    #plt.annotate('Aperture', (1.020, -.265))
     #plt.annotate('Field lines', (fl_r[-1], fl_z[-1]))
     #plt.annotate('View corners', corners[2])
     plt.xlabel('R (m)')
@@ -446,4 +540,3 @@ def slide_corr(frames, pixel, other_pixels=None):
 
 if __name__ == '__main__':
     slide_gpi(int(sys.argv[1]))
-
