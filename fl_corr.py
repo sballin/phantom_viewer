@@ -2,8 +2,6 @@ import os
 from scipy.io.idl import readsav
 import numpy as np
 import matplotlib
-matplotlib.use('Qt4Agg')
-matplotlib.rcParams['backend.qt4']='PySide'
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 import acquire
@@ -12,7 +10,7 @@ import view
 
 
 def make_fls(shot):
-    os.system("idl -e '.r /usr/local/cmod/codes/spectroscopy/ir/FLIR/create_periscope_view_Xpt.pro,'")
+    os.system("idl -e '.r /usr/local/cmod/codes/spectroscopy/ir/FLIR/create_periscope_view_Xpt.pro,{shot}'".format(shot))
 
 
 def overlay_filament(base, overlay):
@@ -35,7 +33,11 @@ def get_best_fl(shot, fls, time):
     plt.show()
  
 
-def show_x_pt_fl(shot):
+def plot_xpoint_and_fieldlines(shot, sav):
+    """
+    Show positions of X-point during given shot and field line R, Z positions
+    for given .sav file.
+    """
     xr, xz = acquire.x_pt_r_z(shot)
     plt.figure()
     plt.scatter(sav.fieldline_r, sav.fieldline_z, color='b')
@@ -65,7 +67,11 @@ def plot_fl_slider(shot, sav):
     Plot field line overlaid on GPI frame alterable with slider.
     """
     fls = sav.fl_image
-    fl_r = sav.fieldline_r; fl_z = sav.fieldline_z
+    fl_r = sav.fieldline_r
+    fl_z = sav.fieldline_z
+    rlcfs = acquire.rlcfs(shot)
+    zlcfs = acquire.zlcfs(shot)
+    machine_x, machine_y = acquire.machine_cross_section()
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     gpi_index = 1028
     xcorrs = np.zeros(fls.shape[0])
@@ -73,21 +79,21 @@ def plot_fl_slider(shot, sav):
         xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
     indices = np.argsort(xcorrs)
 
+    # Plot camera image with field line overlay
     fig, ax = plt.subplots()
     plt.subplot(121)
-    cmap = plt.cm.gray; cmap.set_bad((1, 0, 0, 1))
+    cmap = plt.cm.gray
+    cmap.set_bad((1, 0, 0, 1))
     im_over = plt.imshow(overlay_filament(frames[gpi_index], fls[indices[-1]]), cmap=cmap, origin='bottom')
 
-    rlcfs = acquire.rlcfs(shot)
-    zlcfs = acquire.zlcfs(shot)
-    machine_x, machine_y = acquire.machine_cross_section()
-
+    # Plot field line R, Z puncture points in context of machine
     ax1 = plt.subplot(122)
-    plt.scatter(fl_r, fl_z, marker='o')
+    plt.scatter(fl_r, fl_z, marker='o', linewidth=0)
     plt.plot(machine_x, machine_y, color='gray')
     plt.plot(rlcfs[60], zlcfs[60])
     plt.axis('equal')
-    plt.xlim([.47, .64]); plt.ylim([-.55, -.25])
+    plt.xlim([.47, .64])
+    plt.ylim([-.55, -.25])
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
     
     # Slider and button settings
@@ -103,15 +109,15 @@ def plot_fl_slider(shot, sav):
     back_button = Button(back_button_area, '<')
     
     def update_base(val):
-        global gpi_index; global indices
-        gpi_index = val
+        global gpi_index, indices
+        gpi_index = int(val)
         for i, fl in enumerate(fls):
-            xcorrs[i] = signals.cross_correlation(frames[val], fl) 
+            xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
         indices = np.argsort(xcorrs)
         update_overlay(-1)
     
     def update_overlay(val):
-        global gpi_index; global indices
+        global gpi_index, indices
         ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], sav.fieldline_z[indices[val]]), color='r')
         im_over.set_array(overlay_filament(frames[gpi_index], fls[indices[val]]))
         f.set_xdata(fl_r[indices[val]])
@@ -137,14 +143,16 @@ def plot_fl_slider(shot, sav):
     plt.show()
         
 
-if __name__ == '__main__':
-    shot = 1150717011 #is the only other one with thin lines
-    #show_x_pt_fl(shot)
+def main():
+    shot = 1150611004 
     
     # Get field line projection images
-    #sav = readsav('fl_images_%s.sav' % shot)
-    sav = readsav('fl_images_1150717011.sav')
+    sav = readsav('fl_images/fl_images_1150611004_780ms_test6.sav')
     fls = sav.fl_image
-    #fls_cross_section_plot(sav)
+    #fls_cross_section_plot(shot, sav)
     plot_fl_slider(shot, sav)
+
+
+if __name__ == '__main__':
+    main()
 
