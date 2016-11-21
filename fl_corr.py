@@ -1,4 +1,5 @@
 import os
+import scipy.interpolate
 from scipy.io.idl import readsav
 import numpy as np
 import matplotlib
@@ -81,21 +82,32 @@ def plot_fl_slider(shot, sav):
     machine_x, machine_y = acquire.machine_cross_section()
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     gpi_index = 0
+
+    # Find cross-correlation scores between frames and field line images
     xcorrs = np.zeros(fls.shape[0])
     for i, fl in enumerate(fls):
         xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
     indices = np.argsort(xcorrs)
 
+    # Interpolate field line cross-correlation scores over R, Z grid
+    r_space = np.linspace(min(fl_r), max(fl_r), 100)
+    z_space = np.linspace(min(fl_z), max(fl_z), 100)
+    r_grid, z_grid = np.meshgrid(r_space, z_space)
+    xcorr_grid = matplotlib.mlab.griddata(fl_r, fl_z, xcorrs, r_grid, z_grid, 
+                                          interp='linear')
+
     # Plot camera image with field line overlay
     fig, ax = plt.subplots()
     plt.subplot(121)
-    plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, origin='bottom')
+    plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, 
+                              origin='bottom')
     overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
-    fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom', alpha=0.8)
+    fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom', 
+                          alpha=0.8)
 
-    # Plot field line R, Z puncture points in context of machine
+    # Plot field line R, Z data in context of machine
     ax1 = plt.subplot(122)
-    plt.scatter(fl_r, fl_z, marker='o', linewidth=0)
+    xcorr_image = plt.pcolormesh(r_grid, z_grid, xcorr_grid)
     plt.plot(machine_x, machine_y, color='gray')
     plt.plot(rlcfs[60], zlcfs[60])
     plt.axis('equal')
@@ -115,19 +127,22 @@ def plot_fl_slider(shot, sav):
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
     back_button = Button(back_button_area, '<')
     
-    def update_fl_list(val):
-        global gpi_index, indices
+    def update_data(val):
+        global gpi_index, indices, xcorr_grid
         gpi_index = int(val)
         for i, fl in enumerate(fls):
             xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
+        xcorr_grid = matplotlib.mlab.griddata(fl_r, fl_z, xcorrs, r_grid, 
+                                              z_grid, interp='linear')
         indices = np.argsort(xcorrs)
-        update_plasma_image(-1)
+        update_images(-1)
     
-    def update_plasma_image(val):
-        global gpi_index, indices
+    def update_images(val):
+        global gpi_index, indices, xcorr_grid
         ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], sav.fieldline_z[indices[val]]), color='r')
         plasma_image.set_array(frames[gpi_index])
         fl_image.set_array(fls[indices[val]])
+        xcorr_image.set_array(xcorr_grid[:-1, :-1].ravel())
         f.set_xdata(fl_r[indices[val]])
         f.set_ydata(fl_z[indices[val]])
         fig.canvas.draw_idle()
@@ -135,15 +150,15 @@ def plot_fl_slider(shot, sav):
     def forward(event):
         global gpi_index
         gpi_index += 1
-        update_fl_list(gpi_index)
+        update_data(gpi_index)
 
     def backward(event):
         global gpi_index
         gpi_index -= 1
-        update_fl_list(gpi_index)
+        update_data(gpi_index)
     
-    fl_slider.on_changed(update_plasma_image)
-    gpi_slider.on_changed(update_fl_list)
+    fl_slider.on_changed(update_images)
+    gpi_slider.on_changed(update_data)
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
