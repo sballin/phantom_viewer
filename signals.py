@@ -41,6 +41,8 @@ def normalized_correlation(a, b, lag=0):
     """
     More reliable cross-correlation that has the advantage of being normalized.
     """
+    a = a.flatten()
+    b = b.flatten()
     if lag == 0:
         return scipy.stats.pearsonr(a, b)[0]
     elif lag < 0:
