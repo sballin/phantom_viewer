@@ -21,18 +21,6 @@ def overlay_filament(base, overlay):
     return newbase.reshape((64, 64))
 
 
-def get_best_fl(shot, fls, time):
-    xr, xz = acquire.x_pt_r_z(shot)
-    xrz = xrz[40] #######JUNK
-    distances = np.zeros(fls.shape[0])
-    for i, f in enumerate(fls):
-        distances[i] = np.sqrt((sav.fieldline_r[i]-xrz[0])**2+(sav.fieldline_z[i]-xrz[1])**2)
-    plt.figure()
-    plt.imshow(fls[np.argmin(distances)], origin='bottom', cmap=plt.cm.gray)
-    print sav.fieldline_r[np.argmin(distances)], sav.fieldline_z[np.argmin(distances)]
-    plt.show()
- 
-
 def plot_xpoint_and_fieldlines(shot, sav):
     """
     Show positions of X-point during given shot and field line R, Z positions
@@ -64,7 +52,7 @@ def fls_cross_section_plot(shot, sav):
 
 def plot_fl_slider(shot, sav):
     """
-    Plot field line overlaid on GPI frame alterable with slider.
+    Match field lines to GPI frames alterable with slider.
     """
     fls = sav.fl_image
     fl_r = sav.fieldline_r
@@ -73,7 +61,7 @@ def plot_fl_slider(shot, sav):
     zlcfs = acquire.zlcfs(shot)
     machine_x, machine_y = acquire.machine_cross_section()
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
-    gpi_index = 1028
+    gpi_index = 0
     xcorrs = np.zeros(fls.shape[0])
     for i, fl in enumerate(fls):
         xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
@@ -145,11 +133,14 @@ def plot_fl_slider(shot, sav):
 
 def main():
     shot = 1150611004 
-    
+
     # Get field line projection images
     sav = readsav('fl_images/fl_images_1150611004_780ms_test6.sav')
-    fls = sav.fl_image
+
+    # Show field lines in context of machine
     #fls_cross_section_plot(shot, sav)
+
+    # Match field lines to images
     plot_fl_slider(shot, sav)
 
 
