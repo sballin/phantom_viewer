@@ -50,6 +50,25 @@ def fls_cross_section_plot(shot, sav):
     view.plot_field_lines(shot, fl_r, fl_z)
 
 
+def make_colormap(seq):
+    """
+    Return a LinearSegmentedColormap
+        seq: a sequence of floats and RGBA-tuples. The floats should be increasing
+             and in the interval (0,1).
+    """
+    seq = [(None,) * 4, 0.0] + list(seq) + [1.0, (None,) * 4]
+    cdict = {'red': [], 'green': [], 'blue': [], 'alpha': []}
+    for i, item in enumerate(seq):
+        if isinstance(item, float):
+            r1, g1, b1, a1= seq[i - 1]
+            r2, g2, b2, a2 = seq[i + 1]
+            cdict['red'].append([item, r1, r2])
+            cdict['green'].append([item, g1, g2])
+            cdict['blue'].append([item, b1, b2])
+            cdict['alpha'].append([item, a1, a2])
+    return matplotlib.colors.LinearSegmentedColormap('CustomMap', cdict)
+
+
 def plot_fl_slider(shot, sav):
     """
     Match field lines to GPI frames alterable with slider.
@@ -70,9 +89,9 @@ def plot_fl_slider(shot, sav):
     # Plot camera image with field line overlay
     fig, ax = plt.subplots()
     plt.subplot(121)
-    cmap = plt.cm.gray
-    cmap.set_bad((1, 0, 0, 1))
-    im_over = plt.imshow(overlay_filament(frames[gpi_index], fls[indices[-1]]), cmap=cmap, origin='bottom')
+    plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, origin='bottom')
+    overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
+    fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom', alpha=0.8)
 
     # Plot field line R, Z puncture points in context of machine
     ax1 = plt.subplot(122)
@@ -96,18 +115,19 @@ def plot_fl_slider(shot, sav):
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
     back_button = Button(back_button_area, '<')
     
-    def update_base(val):
+    def update_fl_list(val):
         global gpi_index, indices
         gpi_index = int(val)
         for i, fl in enumerate(fls):
             xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
         indices = np.argsort(xcorrs)
-        update_overlay(-1)
+        update_plasma_image(-1)
     
-    def update_overlay(val):
+    def update_plasma_image(val):
         global gpi_index, indices
         ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], sav.fieldline_z[indices[val]]), color='r')
-        im_over.set_array(overlay_filament(frames[gpi_index], fls[indices[val]]))
+        plasma_image.set_array(frames[gpi_index])
+        fl_image.set_array(fls[indices[val]])
         f.set_xdata(fl_r[indices[val]])
         f.set_ydata(fl_z[indices[val]])
         fig.canvas.draw_idle()
@@ -115,15 +135,15 @@ def plot_fl_slider(shot, sav):
     def forward(event):
         global gpi_index
         gpi_index += 1
-        update_base(gpi_index)
+        update_fl_list(gpi_index)
 
     def backward(event):
         global gpi_index
         gpi_index -= 1
-        update_base(gpi_index)
+        update_fl_list(gpi_index)
     
-    fl_slider.on_changed(update_overlay)
-    gpi_slider.on_changed(update_base)
+    fl_slider.on_changed(update_plasma_image)
+    gpi_slider.on_changed(update_fl_list)
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
