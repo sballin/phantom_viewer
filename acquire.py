@@ -133,7 +133,7 @@ def extents(shot, camera):
     return [rmin, rmax, zmin, zmax]
 
 
-def x_pt_r_z(shot):
+def x_pt_rz(shot):
     """
     Return (R, Z) coordinate tuples of the lower X-point in m.
     """
@@ -164,14 +164,9 @@ def psi_contours(shot):
     return psinew, extent
 
 
-def rlcfs(shot):
+def lcfs_rz(shot):
     efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
-    return efit_tree.getRLCFS()
-
-
-def zlcfs(shot):
-    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
-    return efit_tree.getZLCFS()
+    return efit_tree.getRLCFS(), efit_tree.getZLCFS()
 
 
 def machine_cross_section():

@@ -27,7 +27,7 @@ def plot_xpoint_and_fieldlines(shot, sav):
     Show positions of X-point during given shot and field line R, Z positions
     for given .sav file.
     """
-    xr, xz = acquire.x_pt_r_z(shot)
+    xr, xz = acquire.x_pt_rz(shot)
     plt.figure()
     plt.scatter(sav.fieldline_r, sav.fieldline_z, color='b')
     plt.scatter(xr, xz, color='r')
@@ -77,8 +77,7 @@ def plot_fl_slider(shot, sav):
     fls = sav.fl_image
     fl_r = sav.fieldline_r
     fl_z = sav.fieldline_z
-    rlcfs = acquire.rlcfs(shot)
-    zlcfs = acquire.zlcfs(shot)
+    rlcfs, zlcfs = acquire.lcfs_rz(shot)
     machine_x, machine_y = acquire.machine_cross_section()
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     gpi_index = 0
@@ -109,10 +108,10 @@ def plot_fl_slider(shot, sav):
     ax1 = plt.subplot(122)
     xcorr_image = plt.pcolormesh(r_grid, z_grid, xcorr_grid)
     plt.plot(machine_x, machine_y, color='gray')
-    plt.plot(rlcfs[60], zlcfs[60])
+    plt.plot(rlcfs[60], zlcfs[60], color='fuchsia')
     plt.axis('equal')
-    plt.xlim([.47, .64])
-    plt.ylim([-.55, -.25])
+    plt.xlim([.49, .62])
+    plt.ylim([-.50, -.33])
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
     
     # Slider and button settings

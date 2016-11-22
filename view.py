@@ -445,8 +445,7 @@ def plot_field_lines(shot, fl_r, fl_z):
     time = acquire.gpi_series(shot, 'phantom2', 'time')
     efit_t_index = process.find_nearest(efit_times, time[0])
 
-    rlcfs = acquire.rlcfs(shot)
-    zlcfs = acquire.zlcfs(shot)
+    rlcfs, zlcfs = acquire.lcfs_rz(shot)
     machine_x, machine_y = acquire.machine_cross_section()
     corners = acquire.frame_corners(shot, 'phantom2')
     corners_r, corners_z = [c[0] for c in corners], [c[1] for c in corners]
