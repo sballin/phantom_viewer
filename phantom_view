@@ -6,15 +6,19 @@ import argparse
 parser = argparse.ArgumentParser(description='Display frames from high-speed Phantom camera videos.')
 parser.add_argument('shot', type=str, nargs='?',
                     help='shot number')
-#parser.add_argument('-p', '--play', action='store_true',
-#                    help='play video with no user control')
+parser.add_argument('-f', action='store_true',
+                    help='show correlation example')
 args = parser.parse_args()
 
 good_python = '/usr/local/bin/python2.7'
-view_path = os.path.dirname(os.path.realpath(__file__)) + '/view.py'
+script_path = os.path.dirname(os.path.realpath(__file__)) 
+view_path = script_path + '/view.py'
+fl_corr_path = script_path + '/fl_corr.py'
 
 if args.shot:
-    os.system('{python} -i {view} {shot}'.format(python=good_python, view=view_path, shot=args.shot))
+    os.system('{python} {view} {shot}'.format(python=good_python, view=view_path, shot=args.shot))
+elif args.f:
+    os.system('{python} {fl}'.format(python=good_python, view=view_path, fl=fl_corr_path))
 else:
     os.system('{python} -i {view}'.format(python=good_python, view=view_path))
 
