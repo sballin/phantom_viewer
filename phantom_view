@@ -1,0 +1,19 @@
+#!/usr/local/bin/python2.7
+
+import os
+import argparse
+
+parser = argparse.ArgumentParser(description='Display frames from high-speed Phantom camera videos.')
+parser.add_argument('shot', type=str, nargs='?',
+                    help='shot number')
+#parser.add_argument('-p', '--play', action='store_true',
+#                    help='play video with no user control')
+args = parser.parse_args()
+
+good_python = '/usr/local/bin/python2.7'
+
+if args.shot:
+    os.system(good_python + ' -i view.py ' + args.shot)
+else:
+    os.system(good_python + ' -i  view.py')
+

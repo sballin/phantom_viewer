@@ -538,4 +538,12 @@ def slide_corr(frames, pixel, other_pixels=None):
 
 
 if __name__ == '__main__':
-    slide_gpi(int(sys.argv[1]))
+    shot = None
+
+    try:
+        shot = int(sys.argv[1])
+    except:
+        print 'Try help(slide_gpi) and help(animate_gpi) for inspiration.'
+
+    if shot: 
+        slide_gpi(shot)
