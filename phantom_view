@@ -11,9 +11,10 @@ parser.add_argument('shot', type=str, nargs='?',
 args = parser.parse_args()
 
 good_python = '/usr/local/bin/python2.7'
+view_path = os.path.dirname(os.path.realpath(__file__)) + '/view.py'
 
 if args.shot:
-    os.system(good_python + ' -i view.py ' + args.shot)
+    os.system('{python} -i {view} {shot}'.format(python=good_python, view=view_path, shot=args.shot))
 else:
-    os.system(good_python + ' -i  view.py')
+    os.system('{python} -i {view}'.format(python=good_python, view=view_path))
 
