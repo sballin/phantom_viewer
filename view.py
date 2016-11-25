@@ -1,8 +1,5 @@
 import sys
 import os
-import matplotlib
-matplotlib.use('Qt4Agg')
-matplotlib.rcParams['backend.qt4']='PySide'
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.widgets import Slider, Button, RadioButtons
@@ -167,6 +164,7 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
 
     def update(val):
         global frames, curr_frame
+        val = int(val)
         curr_frame = val 
         curr_time = time[val]
         slider.valtext.set_text('%d (t=%.5f s)' % (val, curr_time))

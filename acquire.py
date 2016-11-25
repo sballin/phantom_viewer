@@ -107,6 +107,11 @@ def time_probe(shot):
     return node.dim_of().data(), node.data()
 
 
+def time_efit(shot):
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    return efit_tree.getTimeBase()
+
+
 def frame_corners(shot, camera):
     """
     Return (R, Z) FOV corner locations for given camera in meters.
