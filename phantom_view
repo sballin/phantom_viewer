@@ -16,7 +16,8 @@ view_path = script_path + '/view.py'
 fl_corr_path = script_path + '/fl_corr.py'
 
 if args.shot:
-    os.system('{python} {view} {shot}'.format(python=good_python, view=view_path, shot=args.shot))
+    os.system('{python} {view} {shot}'.format(python=good_python, 
+                                              view=view_path, shot=args.shot))
 elif args.correlate:
     os.system('{python} {fl}'.format(python=good_python, view=view_path, fl=fl_corr_path))
 else:

@@ -176,7 +176,8 @@ def main():
     shot = 1150611004 
 
     # Get field line projection images
-    sav = readsav('fl_images/fl_images_1150611004_780ms_test6.sav')
+    script_path = os.path.dirname(os.path.realpath(__file__)) 
+    sav = readsav(script_path + '/fl_images/fl_images_1150611004_780ms_test6.sav')
 
     # Show field lines in context of machine
     #fls_cross_section_plot(shot, sav)
