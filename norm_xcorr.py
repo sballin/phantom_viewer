@@ -1,3 +1,8 @@
+"""
+File copied from https://github.com/oleg-alexandrov/projects/blob/master/fft_match/norm_xcorr.py
+Publicly available, no license specified.
+"""
+
 import numpy as np
 import scipy as sp
 from scipy.ndimage import convolve
