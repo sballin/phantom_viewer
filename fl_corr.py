@@ -102,10 +102,11 @@ def plot_fl_slider(shot, sav):
     overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
     fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom',
                           alpha=0.8)
-    plt.title('Phantom camera frame')
+    plt.title('Phantom camera view')
 
     # Plot field line R, Z data in context of machine
     ax1 = plt.subplot(122)
+    plt.title('Toroidal cross section')
     xcorr_image = plt.pcolormesh(r_grid, z_grid, xcorr_grid)
     colorbar = plt.colorbar()
     colorbar.set_label('Cross-correlation')
@@ -120,7 +121,7 @@ def plot_fl_slider(shot, sav):
     
     # Slider and button settings
     fl_slide_area = plt.axes([0.17, 0.02, 0.65, 0.03])
-    fl_slider = Slider(fl_slide_area, 'Cross-correlation', 0, len(fls)-1, 
+    fl_slider = Slider(fl_slide_area, 'Correlation rank', 0, len(fls)-1, 
                        valinit=0)
     fl_slider.valfmt = '%d'
     gpi_slide_area = plt.axes([0.17, 0.06, 0.65, 0.03])
@@ -131,7 +132,6 @@ def plot_fl_slider(shot, sav):
     forward_button = Button(forward_button_area, '>')
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
     back_button = Button(back_button_area, '<')
-    plt.tight_layout()
 
     def update_data(val):
         global gpi_index, indices, xcorr_grid
@@ -140,14 +140,12 @@ def plot_fl_slider(shot, sav):
             xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
         xcorr_grid = matplotlib.mlab.griddata(fl_r, fl_z, xcorrs, r_grid, 
                                               z_grid, interp='linear')
-        indices = np.argsort(xcorrs)
-        update_images(-1)
+        indices = np.argsort(xcorrs)[::-1]
+        update_images(0)
     
     def update_images(val):
         global gpi_index, indices, xcorr_grid
-        ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], 
-                                            sav.fieldline_z[indices[val]]), 
-                      color='r')
+        val = int(val)
         plasma_image.set_array(frames[gpi_index])
         fl_image.set_array(fls[indices[val]])
         xcorr_image.set_array(xcorr_grid[:-1, :-1].ravel())
@@ -170,7 +168,7 @@ def plot_fl_slider(shot, sav):
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
-    plt.subplots_adjust(bottom=0.1)
+    plt.tight_layout()
     plt.show()
         
 
