@@ -1,5 +1,4 @@
 import os
-import scipy.interpolate
 from scipy.io.idl import readsav
 import numpy as np
 import matplotlib
@@ -54,8 +53,8 @@ def fls_cross_section_plot(shot, sav):
 def make_colormap(seq):
     """
     Return a LinearSegmentedColormap
-        seq: a sequence of floats and RGBA-tuples. The floats should be increasing
-             and in the interval (0,1).
+        seq: a sequence of floats and RGBA-tuples. The floats should be 
+        increasing and in the interval (0,1).
     """
     seq = [(None,) * 4, 0.0] + list(seq) + [1.0, (None,) * 4]
     cdict = {'red': [], 'green': [], 'blue': [], 'alpha': []}
@@ -101,31 +100,39 @@ def plot_fl_slider(shot, sav):
     plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, 
                               origin='bottom')
     overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
-    fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom', 
+    fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom',
                           alpha=0.8)
+    plt.title('Phantom camera frame')
 
     # Plot field line R, Z data in context of machine
     ax1 = plt.subplot(122)
     xcorr_image = plt.pcolormesh(r_grid, z_grid, xcorr_grid)
+    colorbar = plt.colorbar()
+    colorbar.set_label('Cross-correlation')
     plt.plot(machine_x, machine_y, color='gray')
     plt.plot(rlcfs[60], zlcfs[60], color='fuchsia')
     plt.axis('equal')
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
+    plt.xlabel('R (m)')
+    plt.ylabel('Z (m)')
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
     
     # Slider and button settings
     fl_slide_area = plt.axes([0.17, 0.02, 0.65, 0.03])
-    fl_slider = Slider(fl_slide_area, 'Fit', 0, len(fls)-1, valinit=0)
+    fl_slider = Slider(fl_slide_area, 'Cross-correlation', 0, len(fls)-1, 
+                       valinit=0)
     fl_slider.valfmt = '%d'
     gpi_slide_area = plt.axes([0.17, 0.06, 0.65, 0.03])
-    gpi_slider = Slider(gpi_slide_area, 'GPI frame', 0, len(frames)-1, valinit=0)
+    gpi_slider = Slider(gpi_slide_area, 'Phantom frame no.', 0, len(frames)-1,
+                        valinit=0)
     gpi_slider.valfmt = '%d'
     forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
     forward_button = Button(forward_button_area, '>')
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
     back_button = Button(back_button_area, '<')
-    
+    plt.tight_layout()
+
     def update_data(val):
         global gpi_index, indices, xcorr_grid
         gpi_index = int(val)
@@ -138,7 +145,9 @@ def plot_fl_slider(shot, sav):
     
     def update_images(val):
         global gpi_index, indices, xcorr_grid
-        ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], sav.fieldline_z[indices[val]]), color='r')
+        ax1.set_title('R: %.5f, Z: %.5f' % (sav.fieldline_r[indices[val]], 
+                                            sav.fieldline_z[indices[val]]), 
+                      color='r')
         plasma_image.set_array(frames[gpi_index])
         fl_image.set_array(fls[indices[val]])
         xcorr_image.set_array(xcorr_grid[:-1, :-1].ravel())
@@ -180,4 +189,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -54,15 +54,19 @@ def gpi_series(shot, camera, series_name):
     """
     tree = MDSplus.Tree('spectroscopy', shot)
     if series_name == 'time': 
-        try: series = tree.getNode('gpi.%s.t_hists' % camera).dim_of().data()
+        try: 
+            series = tree.getNode('gpi.%s.t_hists' % camera).dim_of().data()
         except MDSplus._tdishr.TdiException: 
             print 'Time not loaded from t_hists'
             start = tree.getNode('gpi.%s.settings.trig_time' % camera).data()
-            frame_rate = tree.getNode('gpi.%s.settings.frame_rate' % camera).data()
-            num_frames = tree.getNode('gpi.%s.settings.num_frames' % camera).data()
+            frame_rate = tree.getNode('gpi.%s.settings.frame_rate' 
+                                      % camera).data()
+            num_frames = tree.getNode('gpi.%s.settings.num_frames' 
+                                      % camera).data()
             return np.arange(start, start + num_frames/float(frame_rate), 1./frame_rate)
     else: 
-        try: series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
+        try: 
+            series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
         except MDSplus._tdishr.TdiException: 
             sys.exit('ERROR loading %s' % series_name)
     print 'Got %s for %s on shot %s from tree' % (series_name, camera, shot)
@@ -107,7 +111,7 @@ def time_probe(shot):
     return node.dim_of().data(), node.data()
 
 
-def time_efit(shot):
+def times_efit(shot):
     efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
     return efit_tree.getTimeBase()
 

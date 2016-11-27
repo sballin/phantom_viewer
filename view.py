@@ -10,7 +10,8 @@ import acquire
 import process
 
 
-def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=20, skip=1):
+def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, 
+                interval=20, skip=1):
     """
     Animate frames while displaying last closed flux surface and relevant plots.
     Parameters
@@ -41,7 +42,8 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
     ax0 = plt.subplot(gs[0])
-    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.gray)
+    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, 
+                    cmap=plt.cm.gray)
     im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     #c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
@@ -57,7 +59,8 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
     vl1 = plt.axvline(time[0], color='r')
     plt.ylabel('[Units]')
     plt.xlim([time[0], time[-1]])
-    plt.ylim([0, np.max([s for i, s in enumerate(ha2) if time[0] < time_ha2[i] < time[-1]])])
+    plt.ylim([0, np.max([s for i, s in enumerate(ha2) 
+                         if time[0] < time_ha2[i] < time[-1]])])
 
     # Line average density plot
     time_dens, dens = process.time_crop(acquire.time_dens(shot),time) 
@@ -73,7 +76,9 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
         im.set_data(frames[0])
         efit_t_index = process.find_nearest(efit_times, time[0])
         #c.set_array(psirz[efit_t_index])
-        #c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
+        #c.set_data(plt.contour(psirz[efit_t_index], 
+        #           levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001),
+        #           extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[0])
@@ -85,7 +90,9 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
         im.set_array(frames[i])
         efit_t_index = process.find_nearest(efit_times, i/float(frame_count)*(time[-1]-time[0]) + time[0])
         #c.set_array(psirz[efit_t_index])
-        #c.set_data(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001), extent=psiext))
+        #c.set_data(plt.contour(psirz[efit_t_index], 
+        #           levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001),
+        #           extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[i])
@@ -99,7 +106,8 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False, interval=2
     plt.show()
 
 
-def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=None):
+def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, 
+              pixel_t_hist=None):
     """
     Slide through GPI frames while displaying last closed flux surface and 
     relevant timeseries plots.
@@ -110,7 +118,8 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
         sub: number of frames to use in average subtraction. 20 works well.
         blur: extent of Gaussian blur, 1, 2, or 3 advisable
         interval: delay in ms between frames during play
-        pixel_t_hist: (x,y) to show time history of that pixel instead of H-alpha
+        pixel_t_hist: (x,y) to show time history of that pixel instead of 
+        H-alpha.
     """
     time = acquire.gpi_series(shot, camera, 'time')
     frames = acquire.video(shot, camera)
@@ -141,7 +150,8 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
     ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
     if pixel_t_hist:
         plt.title('Pixel time history')
-        plt.plot(time, frames[:, pixel_t_hist[0], pixel_t_hist[1]].swapaxes(0, 1))
+        plt.plot(time, 
+                 frames[:, pixel_t_hist[0], pixel_t_hist[1]].swapaxes(0, 1))
     else: 
         plt.title('H-alpha')
         time_ha2, ha2 = process.time_crop(acquire.time_ha2(shot), time)
@@ -210,7 +220,8 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
     
     def play(event):
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=frame_count, interval=interval, blit=False)
+                                       frames=frame_count, interval=interval, 
+                                       blit=False)
 
     def forward(event):
         global curr_frame
@@ -244,7 +255,8 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
         elif label == 'Blur %d' % blur:
             frames = acquire.video(shot, camera, sub=sub, blur=blur)
         elif label == 'Sobel':
-            frames = acquire.video(shot, camera, sub=sub, blur=blur, sobel=True)
+            frames = acquire.video(shot, camera, sub=sub, blur=blur, 
+                                   sobel=True)
         update(curr_frame)
         im.autoscale()
 
@@ -262,7 +274,9 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0, pixel_t_hist=
     left = .3
     bottom = .79
     filter_radio_area = plt.axes([left, bottom, .1, .12])
-    filter_radio = RadioButtons(filter_radio_area, ('Orig', 'Sub %d' % sub, 'Blur %d' % blur, 'Sobel'))
+    filter_radio = RadioButtons(filter_radio_area, ('Orig', 'Sub %d' % sub, 
+                                                    'Blur %d' % blur, 
+                                                    'Sobel'))
     filter_radio.on_clicked(filter)
     cmap_radio_area = plt.axes([left, bottom-.08, .1, .07])
     cmap_radio = RadioButtons(cmap_radio_area, ('Red', 'Gray'))
@@ -304,12 +318,14 @@ def animate_frames(frames, cmap=plt.cm.gray, disp=True, save=False, interval=5):
     plt.tight_layout(pad=0, rect=(0, 0, 1, 1))
     pos = ax.get_position(); pos.y0 = 0.; ax.set_position(pos)
     anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                   frames=frames.shape[0], interval=interval, blit=False)
+                                   frames=frames.shape[0], interval=interval, 
+                                   blit=False)
     if disp: plt.show()
     if save: anim.save('out.gif', writer='imagemagick', fps=20)
 
 
-def animate_shot(shot, camera='phantom2', cmap=plt.cm.gray, disp=True, save=False, interval=50):
+def animate_shot(shot, camera='phantom2', cmap=plt.cm.gray, disp=True, 
+                 save=False, interval=50):
     """
     Animate frames for the given shot and camera.
     Parameters
@@ -333,7 +349,8 @@ def output_gif(frames):
     """
     frames = frames[:, ::-1, :]
     for i, frame in enumerate(frames):
-        plt.imsave('outframe_%06d.png' % i, frame, vmin=frame.min(), vmax=frame.max(), cmap=plt.cm.hot)
+        plt.imsave('outframe_%06d.png' % i, frame, vmin=frame.min(), 
+                   vmax=frame.max(), cmap=plt.cm.hot)
     os.system('convert outframe_*.png -layers optimize -delay 2/100 out.gif && rm outframe_*.png')
 
 
@@ -367,7 +384,8 @@ def output_frames(shot, start, end, traces=True):
 
     if not traces:
         plt.figure()
-        im = plt.imshow(frames[start_frame], origin='lower', cmap=plt.cm.hot, vmin=0, vmax=130)
+        im = plt.imshow(frames[start_frame], origin='lower', cmap=plt.cm.hot, 
+                        vmin=0, vmax=130)
         #plt.axis('off')
         plt.colorbar()
         for i in xrange(start_frame, end_frame):
@@ -391,15 +409,18 @@ def output_frames(shot, start, end, traces=True):
     plt.subplots_adjust(hspace=.5)
     #plt.subplots_adjust(bottom=0.25)
     ax0 = plt.subplot(gs[0])
-    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, cmap=plt.cm.hot)
+    im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, 
+                    cmap=plt.cm.hot)
     im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='c')
     plt.xlim(gpi_extent[0:2])
     plt.ylim(gpi_extent[2:4])
 
     time_ha2, ha2 = acquire.time_ha2(shot)
-    ha_max = np.max([s for i, s in enumerate(ha2) if time[start_frame] < time_ha2[i] < time[end_frame]])
-    ha_min = np.min([s for i, s in enumerate(ha2) if time[start_frame] < time_ha2[i] < time[end_frame]])
+    ha_max = np.max([s for i, s in enumerate(ha2) 
+                     if time[start_frame] < time_ha2[i] < time[end_frame]])
+    ha_min = np.min([s for i, s in enumerate(ha2) 
+                     if time[start_frame] < time_ha2[i] < time[end_frame]])
     time_dens, dens = acquire.time_dens(shot)
     dens_max = np.max(dens)
     dens_min = np.min(dens)
@@ -451,7 +472,8 @@ def plot_field_lines(shot, fl_r, fl_z):
     
     plt.figure()
     plt.plot(fl_r, fl_z, 'b.')
-    plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .007), extent=psiext))
+    plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), 
+             np.max(psirz), .007), extent=psiext))
     plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], 'r-')
     plt.plot(machine_x, machine_y, color='gray')
     #plt.plot(1.020, -.265, 'go')
@@ -480,7 +502,8 @@ def slide_corr(frames, pixel, other_pixels=None):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     plt.subplots_adjust(bottom=0.25)
-    im = plt.imshow(frames[frame_count/2], origin='bottom', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
+    im = plt.imshow(frames[frame_count/2], origin='bottom', 
+                    cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
     circ = plt.Circle(pixel[::-1], radius=1, edgecolor='r', fill=False)
     ax.add_patch(circ)
     if other_pixels: 
@@ -489,7 +512,8 @@ def slide_corr(frames, pixel, other_pixels=None):
     else:
         t_hists_r = acquire.gpi_series(1150611004, 'phantom2', 'hist_xpix')
         t_hists_z = acquire.gpi_series(1150611004, 'phantom2', 'hist_ypix')
-    for pos in zip(t_hists_r, t_hists_z): ax.add_patch(plt.Circle(pos, radius=1, edgecolor='b', fill=False))
+    for pos in zip(t_hists_r, t_hists_z): 
+        ax.add_patch(plt.Circle(pos, radius=1, edgecolor='b', fill=False))
     plt.colorbar()
     plt.title('Correlation for pixel (%d, %d)' % pixel)
     plt.xlabel('Pixel y coordinate')
@@ -528,8 +552,8 @@ def slide_corr(frames, pixel, other_pixels=None):
         return [im]
     
     def play(event):
-        anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=frame_count, interval=0, blit=False)
+        anim = animation.FuncAnimation(fig, animate, init_func=init, frames=
+                                       frame_count, interval=0, blit=False)
 
     play_button.on_clicked(play)
     plt.show()
