@@ -1,3 +1,4 @@
 out/
 venv/
 *.pyc
+*DS_Store*

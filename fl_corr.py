@@ -96,13 +96,14 @@ def plot_fl_slider(shot, sav):
 
     # Plot camera image with field line overlay
     fig, ax = plt.subplots()
+    fig.suptitle('Shot {}'.format(shot))
     plt.subplot(121)
     plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, 
                               origin='bottom')
     overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
     fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom',
                           alpha=0.8)
-    plt.title('Phantom camera view')
+    plt.title('Divertor camera view')
 
     # Plot field line R, Z data in context of machine
     ax1 = plt.subplot(122)
@@ -120,12 +121,12 @@ def plot_fl_slider(shot, sav):
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
     
     # Slider and button settings
-    fl_slide_area = plt.axes([0.17, 0.02, 0.65, 0.03])
+    fl_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
     fl_slider = Slider(fl_slide_area, 'Correlation rank', 0, len(fls)-1, 
                        valinit=0)
     fl_slider.valfmt = '%d'
-    gpi_slide_area = plt.axes([0.17, 0.06, 0.65, 0.03])
-    gpi_slider = Slider(gpi_slide_area, 'Phantom frame no.', 0, len(frames)-1,
+    gpi_slide_area = plt.axes([0.20, 0.06, 0.60, 0.03])
+    gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
                         valinit=0)
     gpi_slider.valfmt = '%d'
     forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
@@ -168,7 +169,7 @@ def plot_fl_slider(shot, sav):
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
-    plt.tight_layout()
+    plt.tight_layout(rect=(0, .1, 1, .9))
     plt.show()
         
 
@@ -177,7 +178,8 @@ def main():
 
     # Get field line projection images
     script_path = os.path.dirname(os.path.realpath(__file__)) 
-    sav = readsav(script_path + '/fl_images/fl_images_1150611004_780ms_test6.sav')
+    sav = readsav(script_path + 
+                  '/fl_images/fl_images_1150611004_780ms_test6.sav')
 
     # Show field lines in context of machine
     #fls_cross_section_plot(shot, sav)
