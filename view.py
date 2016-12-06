@@ -35,7 +35,6 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
     zlcfs = efit_tree.getZLCFS()
     efit_t_index = process.find_nearest(efit_times, time[0])
     gpi_extent = acquire.extent(shot, camera)
-    psirz, psiext = acquire.flux_interpolated(shot)
 
     # GPI, LCFS, and flux contour initial plotting
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
@@ -46,9 +45,6 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
                     cmap=plt.cm.gray)
     im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
-    # c, = plt.plot(plt.contour(psirz[efit_t_index], 
-    #              levels=np.arange(np.min(psirz), np.max(psirz), .001), 
-    #              extent=psiext))
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
     plt.xlim(gpi_extent[0:2])
     plt.ylim(gpi_extent[2:4])
@@ -77,10 +73,6 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
     def init():
         im.set_data(frames[0])
         efit_t_index = process.find_nearest(efit_times, time[0])
-        #c.set_array(psirz[efit_t_index])
-        #c.set_data(plt.contour(psirz[efit_t_index], 
-        #           levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001),
-        #           extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[0])
@@ -91,10 +83,6 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
         i *= skip
         im.set_array(frames[i])
         efit_t_index = process.find_nearest(efit_times, i/float(frame_count)*(time[-1]-time[0]) + time[0])
-        #c.set_array(psirz[efit_t_index])
-        #c.set_data(plt.contour(psirz[efit_t_index], 
-        #           levels=np.arange(np.min(psirz[0]), np.max(psirz[0]), .001),
-        #           extent=psiext))
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[i])
@@ -458,7 +446,7 @@ def plot_field_lines(shot, fl_r, fl_z):
     machine_x, machine_y = acquire.machine_cross_section()
     # corners = acquire.frame_corners(shot, 'phantom2')
     # corners_r, corners_z = [c[0] for c in corners], [c[1] for c in corners]
-    psirz, psiext = acquire.flux_interpolated(shot)
+    time, psirz, psiext = acquire.time_flux_extent(shot)
     
     plt.figure()
     plt.plot(fl_r, fl_z, 'b.')

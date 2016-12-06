@@ -153,27 +153,6 @@ def x_pt_rz(shot):
     return rseps[:, 0], zseps[:, 0]
                                    
 
-def flux_interpolated(shot):
-    """
-    Get contours of magnetic flux interpolated over a grid.
-    Returns
-        psinew: psi values over new grid,
-        extent: (R, Z) coordinates of grid corners
-    """
-    tree = MDSplus.Tree('analysis', shot)
-    psirz = tree.getNode('efit.results.g_eqdsk.psirz').data()
-    rgrid = tree.getNode('efit.results.g_eqdsk.rgrid').data()
-    zgrid = tree.getNode('efit.results.g_eqdsk.zgrid').data()
-    rnew = np.arange(np.min(rgrid), np.max(rgrid), .01)
-    znew = np.arange(np.min(zgrid), np.max(zgrid), .01)
-    psinew = np.zeros((len(psirz), len(znew), len(rnew)))
-    for i in range(len(psirz)):
-        f = scipy.interpolate.interp2d(rgrid, zgrid, psirz[i], kind='cubic')
-        psinew[i, :, :] = f(rnew, znew) 
-    extent = [np.min(rgrid), np.max(rgrid), np.min(zgrid), np.max(zgrid)]
-    return psinew, extent
-    
-    
 def time_flux_extent(shot):
     efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
     time = efit_tree.getTimeBase()
