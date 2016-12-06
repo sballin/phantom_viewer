@@ -7,6 +7,7 @@ from matplotlib.widgets import Slider, Button
 import acquire
 import signals
 import view
+import process
 
 
 def make_fls(shot):
@@ -37,6 +38,7 @@ def fls_cross_section_plot(shot, sav):
     """
     Show best matching field lines on cross section plot.
     """
+    fls = sav.fl_image
     frames = acquire.video(shot, 'phantom2', sub=5, sobel=False)
     fl_r = fl_z = []
     noframes = 128
@@ -73,18 +75,21 @@ def plot_fl_slider(shot, sav):
     """
     Match field lines to GPI frames alterable with slider.
     """
+    time = acquire.gpi_series(shot, 'phantom2', 'time')
+    frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
+    frame_index = 0
     fls = sav.fl_image
     fl_r = sav.fieldline_r
     fl_z = sav.fieldline_z
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
+    efit_times, flux, flux_extent = acquire.time_flux_extent(shot)
+    efit_t_index = process.find_nearest(efit_times, time[0])
     machine_x, machine_y = acquire.machine_cross_section()
-    frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
-    gpi_index = 0
 
     # Find cross-correlation scores between frames and field line images
     xcorrs = np.zeros(fls.shape[0])
     for i, fl in enumerate(fls):
-        xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
+        xcorrs[i] = signals.cross_correlation(frames[frame_index], fl) 
     indices = np.argsort(xcorrs)
 
     # Interpolate field line cross-correlation scores over R, Z grid
@@ -98,7 +103,7 @@ def plot_fl_slider(shot, sav):
     fig, ax = plt.subplots()
     fig.suptitle('Shot {}'.format(shot))
     plt.subplot(121)
-    plasma_image = plt.imshow(frames[gpi_index], cmap=plt.cm.gray, 
+    plasma_image = plt.imshow(frames[frame_index], cmap=plt.cm.gray, 
                               origin='bottom')
     overlay_cmap = make_colormap([(1., 0., 0., 0.), (1., 0., 0., 1.)])
     fl_image = plt.imshow(fls[indices[-1]], cmap=overlay_cmap, origin='bottom',
@@ -106,19 +111,20 @@ def plot_fl_slider(shot, sav):
     plt.title('Divertor camera view')
 
     # Plot field line R, Z data in context of machine
-    ax1 = plt.subplot(122)
+    plt.subplot(122)
     plt.title('Toroidal cross section')
     xcorr_image = plt.pcolormesh(r_grid, z_grid, xcorr_grid)
     colorbar = plt.colorbar()
     colorbar.set_label('Cross-correlation')
     plt.plot(machine_x, machine_y, color='gray')
-    plt.plot(rlcfs[60], zlcfs[60], color='fuchsia')
+    l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='fuchsia')
     plt.axis('equal')
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
     plt.xlabel('R (m)')
     plt.ylabel('Z (m)')
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
+    c = plt.contour(flux[efit_t_index], 100, extent=flux_extent)
     
     # Slider and button settings
     fl_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
@@ -135,34 +141,37 @@ def plot_fl_slider(shot, sav):
     back_button = Button(back_button_area, '<')
 
     def update_data(val):
-        global gpi_index, indices, xcorr_grid
-        gpi_index = int(val)
+        global frame_index, indices, xcorr_grid
+        frame_index = int(val)
         for i, fl in enumerate(fls):
-            xcorrs[i] = signals.cross_correlation(frames[gpi_index], fl) 
+            xcorrs[i] = signals.cross_correlation(frames[frame_index], fl) 
         xcorr_grid = matplotlib.mlab.griddata(fl_r, fl_z, xcorrs, r_grid, 
                                               z_grid, interp='linear')
         indices = np.argsort(xcorrs)[::-1]
         update_images(0)
     
     def update_images(val):
-        global gpi_index, indices, xcorr_grid
+        global frame_index, indices, xcorr_grid
         val = int(val)
-        plasma_image.set_array(frames[gpi_index])
+        efit_t_index = process.find_nearest(efit_times, time[frame_index])
+        plasma_image.set_array(frames[frame_index])
         fl_image.set_array(fls[indices[val]])
-        xcorr_image.set_array(xcorr_grid[:-1, :-1].ravel())
         f.set_xdata(fl_r[indices[val]])
         f.set_ydata(fl_z[indices[val]])
+        l.set_xdata(rlcfs[efit_t_index])
+        l.set_ydata(zlcfs[efit_t_index])
+        xcorr_image.set_array(xcorr_grid[:-1, :-1].ravel())
         fig.canvas.draw_idle()
 
     def forward(event):
-        global gpi_index
-        gpi_index += 1
-        update_data(gpi_index)
+        global frame_index
+        frame_index += 1
+        update_data(frame_index)
 
     def backward(event):
-        global gpi_index
-        gpi_index -= 1
-        update_data(gpi_index)
+        global frame_index
+        frame_index -= 1
+        update_data(frame_index)
     
     fl_slider.on_changed(update_images)
     gpi_slider.on_changed(update_data)

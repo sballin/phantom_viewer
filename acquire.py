@@ -63,7 +63,8 @@ def gpi_series(shot, camera, series_name):
                                       % camera).data()
             num_frames = tree.getNode('gpi.%s.settings.num_frames' 
                                       % camera).data()
-            return np.arange(start, start + num_frames/float(frame_rate), 1./frame_rate)
+            return np.arange(start, start + num_frames/float(frame_rate), 
+                             1./frame_rate)
     else: 
         try: 
             series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
@@ -130,7 +131,7 @@ def frame_corners(shot, camera):
                 for corner in ['br', 'tr', 'tl', 'bl']]
 
 
-def extents(shot, camera):
+def extent(shot, camera):
     """
     Calculate R, Z border locations and return in matplotlib 'extent' order.
     """
@@ -152,7 +153,7 @@ def x_pt_rz(shot):
     return rseps[:, 0], zseps[:, 0]
                                    
 
-def psi_contours(shot):
+def flux_interpolated(shot):
     """
     Get contours of magnetic flux interpolated over a grid.
     Returns
@@ -171,6 +172,16 @@ def psi_contours(shot):
         psinew[i, :, :] = f(rnew, znew) 
     extent = [np.min(rgrid), np.max(rgrid), np.min(zgrid), np.max(zgrid)]
     return psinew, extent
+    
+    
+def time_flux_extent(shot):
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    time = efit_tree.getTimeBase()
+    flux = efit_tree.getFluxGrid()
+    rgrid = efit_tree.getRGrid()
+    zgrid = efit_tree.getZGrid()
+    extent = [np.min(rgrid), np.max(rgrid), np.min(zgrid), np.max(zgrid)]
+    return time, flux, extent
 
 
 def lcfs_rz(shot):
@@ -182,4 +193,3 @@ def machine_cross_section():
     efit_tree = eqtools.CModEFIT.CModEFITTree(1150611004)
     machine_x, machine_y = efit_tree.getMachineCrossSectionFull()
     return machine_x, machine_y
-

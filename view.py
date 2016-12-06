@@ -34,26 +34,28 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
     rlcfs = efit_tree.getRLCFS()
     zlcfs = efit_tree.getZLCFS()
     efit_t_index = process.find_nearest(efit_times, time[0])
-    gpi_extent = acquire.extents(shot, camera)
-    psirz, psiext = acquire.psi_contours(shot)
+    gpi_extent = acquire.extent(shot, camera)
+    psirz, psiext = acquire.flux_interpolated(shot)
 
     # GPI, LCFS, and flux contour initial plotting
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25)
-    ax0 = plt.subplot(gs[0])
+    plt.subplot(gs[0])
     im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, 
                     cmap=plt.cm.gray)
     im.get_axes().locator_params(nbins=6)
     l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
-    #c, = plt.plot(plt.contour(psirz[efit_t_index], levels=np.arange(np.min(psirz), np.max(psirz), .001), extent=psiext))
+    # c, = plt.plot(plt.contour(psirz[efit_t_index], 
+    #              levels=np.arange(np.min(psirz), np.max(psirz), .001), 
+    #              extent=psiext))
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
     plt.xlim(gpi_extent[0:2])
     plt.ylim(gpi_extent[2:4])
 
     # H_alpha timeseries plot
     time_ha2, ha2 = acquire.time_ha2(shot)
-    ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
+    plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
     plt.plot(time_ha2, ha2)
     plt.title('H-alpha')
     vl1 = plt.axvline(time[0], color='r')
@@ -64,7 +66,7 @@ def animate_gpi(shot, camera='phantom2', sub=20, blur=0, sobel=False,
 
     # Line average density plot
     time_dens, dens = process.time_crop(acquire.time_dens(shot),time) 
-    ax2 = plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
+    plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
     plt.title('Line Average Density')
     plt.plot(time_dens, dens)
     vl2 = plt.axvline(time[0], color='r')
@@ -124,30 +126,25 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0,
     time = acquire.gpi_series(shot, camera, 'time')
     frames = acquire.video(shot, camera)
     frame_count = frames.shape[0]
-
-    # Gather LCFS data
-    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
-    efit_times = efit_tree.getTimeBase()
-    rlcfs = efit_tree.getRLCFS()
-    zlcfs = efit_tree.getZLCFS()
+    phantom_extent = acquire.extent(shot, camera)
+    efit_times = acquire.times_efit(shot)
     efit_t_index = process.find_nearest(efit_times, time[0])
-    extents = acquire.extents(shot, camera)
     
     # Plot GPI and LCFS 
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
     fig, ax = plt.subplots()
     plt.subplots_adjust(bottom=0.25, hspace=.43, top=.96)
-    ax0 = plt.subplot(gs[0])
-    im = plt.imshow(frames[0], origin='lower', extent=extents, cmap=plt.cm.hot)
+    plt.subplot(gs[0])
+    im = plt.imshow(frames[0], origin='lower', extent=phantom_extent, 
+                    cmap=plt.cm.hot)
     plt.colorbar()
     im.get_axes().locator_params(nbins=6)
-    l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='r')
     plt.scatter(*zip(*acquire.frame_corners(shot, camera)), color='r')
-    plt.xlim(extents[0:2])
-    plt.ylim(extents[2:4])
+    plt.xlim(phantom_extent[0:2])
+    plt.ylim(phantom_extent[2:4])
 
     # Plot H_alpha or pixel timeseries
-    ax1 = plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
+    plt.subplot(gs[1]).locator_params(axis='y', nbins=4)
     if pixel_t_hist:
         plt.title('Pixel time history')
         plt.plot(time, 
@@ -162,7 +159,7 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0,
 
     # Plot line average density 
     time_dens, dens = process.time_crop(acquire.time_dens(shot), time) 
-    ax2 = plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
+    plt.subplot(gs[2]).locator_params(axis='y', nbins=4)
     plt.title('Line Average Density')
     plt.plot(time_dens, dens)
     vl2 = plt.axvline(time[0], color='r')
@@ -181,8 +178,6 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0,
         if val < frame_count: 
             im.set_array(frames[val])
             efit_t_index = process.find_nearest(efit_times, curr_time)
-            l.set_xdata(rlcfs[efit_t_index])
-            l.set_ydata(zlcfs[efit_t_index])
             vl1.set_xdata(curr_time)
             vl2.set_xdata(curr_time)
         fig.canvas.draw_idle()
@@ -199,8 +194,6 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0,
         curr_frame = int(curr_frame)
         start_frame = curr_frame
         im.set_data(frames[curr_frame])
-        l.set_xdata(rlcfs[efit_t_index])
-        l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[curr_frame])
         vl2.set_xdata(time[curr_frame])
         for i in xrange(curr_frame, curr_frame + 200, 1): 
@@ -212,8 +205,6 @@ def slide_gpi(shot, camera='phantom2', sub=20, blur=3, interval=0,
 
     def animate(i):
         im.set_array(frames[i])
-        l.set_xdata(rlcfs[efit_t_index])
-        l.set_ydata(zlcfs[efit_t_index])
         vl1.set_xdata(time[i])
         vl2.set_xdata(time[i])
         return [im, l, vl1, vl2]
@@ -377,7 +368,6 @@ def output_frames(shot, start, end, traces=True):
         start_frame = process.find_nearest(time, start)
         end_frame = process.find_nearest(time, end)
     frames = acquire.video(shot, camera, sub=20) 
-    frame_count = frames.shape[0]
 
     folder_name = '%s-%d-%d' % (shot, start_frame, end_frame)
     os.system('mkdir %s' % folder_name)
@@ -400,15 +390,15 @@ def output_frames(shot, start, end, traces=True):
     rlcfs = efit_tree.getRLCFS()
     zlcfs = efit_tree.getZLCFS()
     efit_t_index = process.find_nearest(efit_times, time[0])
-    gpi_extent = acquire.extents(shot, camera)
+    gpi_extent = acquire.extent(shot, camera)
 
     # GPI, LCFS initial plotting
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
     #fig, ax = plt.subplots()
-    fig = plt.figure()
+    plt.figure()
     plt.subplots_adjust(hspace=.5)
     #plt.subplots_adjust(bottom=0.25)
-    ax0 = plt.subplot(gs[0])
+    plt.subplot(gs[0])
     im = plt.imshow(frames[0], origin='lower', extent=gpi_extent, 
                     cmap=plt.cm.hot)
     im.get_axes().locator_params(nbins=6)
@@ -466,9 +456,9 @@ def plot_field_lines(shot, fl_r, fl_z):
 
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     machine_x, machine_y = acquire.machine_cross_section()
-    corners = acquire.frame_corners(shot, 'phantom2')
-    corners_r, corners_z = [c[0] for c in corners], [c[1] for c in corners]
-    psirz, psiext = acquire.psi_contours(shot)
+    # corners = acquire.frame_corners(shot, 'phantom2')
+    # corners_r, corners_z = [c[0] for c in corners], [c[1] for c in corners]
+    psirz, psiext = acquire.flux_interpolated(shot)
     
     plt.figure()
     plt.plot(fl_r, fl_z, 'b.')
@@ -569,4 +559,3 @@ if __name__ == '__main__':
         slide_gpi(shot)
     else:
         print 'Try help(slide_gpi) and help(animate_gpi) for inspiration.'
-
