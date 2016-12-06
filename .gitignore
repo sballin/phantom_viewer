@@ -3,4 +3,4 @@ venv/
 *.pyc
 *DS_Store*
 .idea/
-stftp-config.json
+sftp-config.json
