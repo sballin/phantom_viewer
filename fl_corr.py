@@ -4,15 +4,19 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
+import pidly
 import acquire
 import signals
 import view
 import process
 
 
-def make_fls(shot):
-    os.system("idl -e '.r /usr/local/cmod/codes/spectroscopy/ir/FLIR/create_periscope_view_Xpt.pro,{shot}'".format(shot))
-
+def make_fls(shot, time):
+    print 'Creating field line images. This will take a couple minutes.'
+    idl = pidly.IDL('/usr/local/bin/idl')
+    idl('.r make_fl_images.pro')
+    idl('create_periscope_view,fl_shot={0},fl_time={1}'.format(shot, time))
+    
 
 def overlay_filament(base, overlay):
     newbase = np.ravel(base.copy())
@@ -124,7 +128,7 @@ def plot_fl_slider(shot, sav):
     plt.xlabel('R (m)')
     plt.ylabel('Z (m)')
     f, = plt.plot(fl_r[indices[-1]], fl_z[indices[-1]], 'ro')
-    c = plt.contour(flux[efit_t_index], 100, extent=flux_extent)
+    plt.contour(flux[efit_t_index], 100, extent=flux_extent)
     
     # Slider and button settings
     fl_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
@@ -183,12 +187,17 @@ def plot_fl_slider(shot, sav):
         
 
 def main():
-    shot = 1150611004 
+    shot = 1150923010 #1150611004 
 
     # Get field line projection images
+    phantom_time = acquire.gpi_series(shot, 'phantom2', 'time')
+    #fl_time = phantom_time[len(phantom_time)/2]
+    #fl_time=780
+    #make_fls(shot, fl_time)
     script_path = os.path.dirname(os.path.realpath(__file__)) 
     sav = readsav(script_path + 
-                  '/fl_images/fl_images_1150611004_780ms_test6.sav')
+                  '/fl_images/Xpt_fieldlines_{0}_1168ms.sav'
+                  .format(shot))
 
     # Show field lines in context of machine
     #fls_cross_section_plot(shot, sav)

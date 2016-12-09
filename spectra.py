@@ -65,7 +65,8 @@ def PS_analysis(shot, camera, frames, centers, radius):
             pixel += frames[:, p[0], p[1]] 
     
         winlen = 1024
-        freqs, PS = scipy.signal.welch(pixel, fs=1./time_step, nperseg=winlen, detrend='linear', scaling='spectrum')
+        freqs, PS = scipy.signal.welch(pixel, fs=1./time_step, nperseg=winlen, 
+                                       detrend='linear', scaling='spectrum')
 
         print 'Point', x, y
         print 'FFT window length: %d' % winlen
@@ -116,9 +117,15 @@ def split_PS_analysis(shot, camera, frames, centers):
         time_after = time[after_transition:after_transition+time_before.size]
         
         segs = 24
-        freqs_before, PS_before = scipy.signal.welch(pixel_before, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_before.size/segs), detrend='linear', scaling='spectrum')
-        freqs_after, PS_after = scipy.signal.welch(pixel_after, fs=1./time_step, nperseg=bicoherence.nextpow2(pixel_after.size/segs), detrend='linear', scaling='spectrum')
-
+        freqs_before, PS_before = scipy.signal.welch(pixel_before, 
+                                                     fs=1./time_step, 
+                                                     nperseg=bicoherence.nextpow2(pixel_before.size/segs), 
+                                                     detrend='linear', scaling='spectrum')
+        freqs_after, PS_after = scipy.signal.welch(pixel_after, 
+                                                   fs=1./time_step, 
+                                                   nperseg=bicoherence.nextpow2(pixel_after.size/segs), 
+                                                   detrend='linear', 
+                                                   scaling='spectrum')
         print 'Point', x, y
         signals.power_analysis(pixel_before, PS_before)
         signals.power_analysis(pixel_after, PS_after)

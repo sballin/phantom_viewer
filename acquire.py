@@ -2,7 +2,6 @@ import sys
 import MDSplus
 import numpy as np
 import process
-import scipy
 import eqtools
 
 

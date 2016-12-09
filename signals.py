@@ -29,7 +29,8 @@ def autocorr_spectrogram(shot, pixel, slice_len):
 def ps_explorer(series, time_step):
     plt.figure()
     for i in range(8, 13):
-        freqs, PS = scipy.signal.welch(series, nperseg=2**i, detrend='linear', scaling='spectrum', fs=1./time_step)
+        freqs, PS = scipy.signal.welch(series, nperseg=2**i, detrend='linear', 
+                                       scaling='spectrum', fs=1./time_step)
         plt.plot(freqs, PS, label='%d samples/segment' % (2**i))
     plt.legend()
     plt.xlabel('Frequency (Hz)')
@@ -101,7 +102,8 @@ def power_analysis(signal, PS):
     Calculate power by intergrating power spectrum and using variance of signal.
     """
     pspower = np.sqrt(np.sum(PS))
-    varpower = np.sqrt(np.var(scipy.signal.detrend(signal, type='linear', bp=[i*signal.size//8 for i in range(8)] + [signal.size])))
+    varpower = np.sqrt(np.var(scipy.signal.detrend(signal, type='linear', 
+                       bp=[i*signal.size//8 for i in range(8)] + [signal.size])))
     print 'Power from PS: 1/N*sqrt(sum(PS(signal)))\t= ', pspower
     print 'Power from signal: sqrt(variance(signal))\t= ', varpower
 
