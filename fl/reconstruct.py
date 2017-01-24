@@ -128,7 +128,7 @@ def write_nnls_reconstruction(shot):
 
     # Run julia and wait until completion
     print "STATUS: Invoking Julia for NNLS reconstruction"
-    os.system('julia -p 8 nnls_pmap.jl {} {}'.format(shot, len(efit_times)))
+    os.system('julia -p 8 nnls.jl {} {}'.format(shot, len(efit_times)))
     # Delete saved phantom frame files because they take up a lot of space
     os.system('rm -rf ../cache/frames_Xpt_{}*.npy'.format(shot))
 
