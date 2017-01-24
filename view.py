@@ -335,7 +335,6 @@ def output_gif(frames):
 
 def output_vid_frames(frames):
     frames = frames[:, ::-1, :]
-    os.system('mkdir out ; rm -f out/*')
     fig = plt.imshow(frames[0])
     fig.set_cmap('hot')
     plt.axis('off')

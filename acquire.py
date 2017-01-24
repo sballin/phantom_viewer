@@ -69,7 +69,6 @@ def gpi_series(shot, camera, series_name):
             series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
         except MDSplus._tdishr.TdiException: 
             sys.exit('ERROR loading %s' % series_name)
-    print 'Got %s for %s on shot %s from tree' % (series_name, camera, shot)
     return series 
 
 

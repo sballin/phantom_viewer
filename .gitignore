@@ -1,6 +1,20 @@
+# General-purpose garbage
 out/
-venv/
-*.pyc
-*DS_Store*
-.idea/
+*.nfs*
+
+# SSH garbage
 sftp-config.json
+*DS_Store*
+._*
+
+# PyCharm garbage
+.idea/
+
+# Python garbage
+Untitled.ipynb
+*.pyc
+*.sav
+*.npy
+*.npz
+notebooks/.ipynb_checkpoints/
+venv/
