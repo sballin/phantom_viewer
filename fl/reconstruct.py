@@ -92,7 +92,6 @@ def write_nnls_reconstruction(shot):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # Get all required data
-    smoothing_param = 5000
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     phantom_times = acquire.gpi_series(shot, 'phantom2', 'time')
 
@@ -120,10 +119,8 @@ def write_nnls_reconstruction(shot):
     for i, time in enumerate(efit_times):
         fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, i))
         fl_matrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
-        fl_matrix = np.concatenate((fl_matrix, 
-                                    smoothing_param*np.identity(len(fl_images))))
         np.save('../cache/fl_matrix_Xpt_{}_{}.npy'.format(shot, i), fl_matrix)
-        frames_flattened = np.array([np.concatenate((f.flatten(), np.zeros(len(fl_images)))) for f in frames_grouped[i]])
+        frames_flattened = np.array([f.flatten() for f in frames_grouped[i]])
         np.save('../cache/frames_Xpt_{}_{}.npy'.format(shot, i), frames_flattened)
 
     # Run julia and wait until completion
