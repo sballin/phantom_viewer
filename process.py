@@ -76,7 +76,7 @@ def subtract_average(frames, interval):
     return frames - average_frames(frames, interval)
 
 
-def subtract_min(frames, interval):
+def subtract_min(frames, interval, correct_saturation=True):
     """
     Subtract running minimum value of each pixel to emphasize fluctuations.
     Parameters
@@ -94,7 +94,20 @@ def subtract_min(frames, interval):
             mins[f] = np.min(frames[:interval], axis=0)
         else:
             mins[f] = np.min(frames[-interval], axis=0)
-    return frames - mins
+    subtracted = frames - mins
+    del mins
+
+    # Set saturated pixels to the max value in their respective frames
+    if correct_saturation:
+        frames_diff = frames - subtracted
+        max_brightness = np.max(frames)
+        # Get saturated pixel locations as ([frames], [pixel is], [pixel js])
+        sat_spots = np.where(frames_diff > 4040)
+        for i, f in enumerate(sat_spots[0]):
+            subtracted[f, sat_spots[1][i], sat_spots[2][i]] = np.max(subtracted[f])
+        del frames_diff, sat_spots 
+
+    return subtracted
 
 
 def gauss(frames, level=3):

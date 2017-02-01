@@ -300,7 +300,7 @@ def animate_frames(frames, cmap=plt.cm.gray, disp=True, save=False, interval=5):
                                    frames=frames.shape[0], interval=interval, 
                                    blit=False)
     if disp: plt.show()
-    if save: anim.save('out.gif', writer='imagemagick', fps=20)
+    if save: anim.save('out.mp4', writer='ffmpeg', fps=20)
 
 
 def animate_shot(shot, camera='phantom2', cmap=plt.cm.gray, disp=True, 

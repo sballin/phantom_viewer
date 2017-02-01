@@ -2,11 +2,13 @@ import numpy as np
 from phantom_viewer import acquire
 from phantom_viewer import process
 from phantom_viewer.fl import make_fl_images
+from phantom_viewer.fl import view
 import scipy.io.idl 
 import scipy.sparse
 import invert_fil_sart
 import glob
 import os
+import matplotlib.pyplot as plt
 
 
 def reconstruct_sparse(shot, fl_sav):
@@ -48,24 +50,44 @@ def reconstruct_sparse(shot, fl_sav):
     a = scipy.sparse.csc_matrix(geomat_vals)
     b = scipy.sparse.csc_matrix(frames[0])
     invert_fil_sart.invert_sart(a, b, lam_start=1)
-
-
+    
+    
 def test_reconstruct():
     """
-    Reconstruct one frame using scipy NNLS.
+    Reconstruct one frame using scipy NNLS. 
     """
     shot = 1150611004
-    sav = scipy.io.idl.readsav('cache/Xpt_fieldlines_1150611004_780ms.sav')
+    fl_images = np.load('../cache/fl_images_Xpt_1150611004_00.npy')
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
-    fl_images = sav.fl_image
+
+    geomatrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
+    target = frames[6249].flatten()
+    ems, rnorm = scipy.optimize.nnls(geomatrix, target)
+    reconstruction = geomatrix.dot(ems).reshape((64,64))
+    
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(frames[6249],cmap=plt.cm.gist_heat, origin='bottom')
+    plt.colorbar()
+    plt.subplot(122)
+    plt.imshow(reconstruction,cmap=plt.cm.gist_heat, origin='bottom')
+    plt.colorbar()
+    plt.show()
+
+
+def test_reconstruct_smooth():
+    """
+    Reconstruct one frame using scipy NNLS with least squares smoothing factor.
+    """
+    shot = 1150611004
+    fl_images = np.load('../cache/fl_images_Xpt_1150611004_00.npy')
+    frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
 
     lamda = 5000
     geomatrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
     geomatrix_smooth = np.concatenate((geomatrix, lamda*np.identity(len(fl_images))))
     target = frames[6249]
     target_smooth = np.concatenate((target.flatten(), np.zeros(len(fl_images))))
-    np.save('cache/matrix.npy', geomatrix_smooth)
-    np.save('cache/target.npy', target_smooth)
     return scipy.optimize.nnls(geomatrix_smooth, target_smooth)
     
 
@@ -77,10 +99,33 @@ def test_smoothing(shot, fl_sav):
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
 
     for lamda in [0.1, 1, 10, 100, 1000, 5000, 10000]:
-        slide_reconstruct(shot, fl_sav, smoothing_param=lamda)
+        view.slide_reconstruct(shot, fl_sav, smoothing_param=lamda)
 
 
-def write_nnls_reconstruction(shot):
+def test_julia():
+    shot = 1150611004
+    smoothing_param = 1000
+
+    frames = acquire.video(shot, 'phantom2', sub=20)[:100]
+    fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, 0))
+
+    if smoothing_param:
+        fl_matrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
+        fl_matrix = np.concatenate((fl_matrix, smoothing_param*np.identity(len(fl_images))))
+        frames_flattened = np.array([np.concatenate((f.flatten(), np.zeros(len(fl_images)))) for f in frames])
+    else:
+        fl_matrix = np.transpose(np.array([fl.flatten().astype(float) for fl in fl_images]))
+        frames_flattened = np.array([f.flatten().astype(float) for f in frames])
+    np.save('../cache/fl_matrix_Xpt_{}_{}.npy'.format(shot, 0), fl_matrix)
+    np.save('../cache/frames_Xpt_{}_{}.npy'.format(shot, 0), frames_flattened)
+
+    os.system('julia -p 8 nnls.jl {} {} {}'.format(shot, 1, smoothing_param))
+
+    os.system('rm -rf ../cache/frames_Xpt_{}*.npy'.format(shot))
+    os.system('rm -rf ../cache/fl_matrix_Xpt_{}*.npy'.format(shot))
+
+
+def write_nnls_reconstruction(shot, smoothing_param=0):
     """
     Reconstruct entire shot and save field line emissivity profiles.
 
@@ -92,7 +137,7 @@ def write_nnls_reconstruction(shot):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # Get all required data
-    frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
+    frames = acquire.video(shot, 'phantom2', sub=20)
     phantom_times = acquire.gpi_series(shot, 'phantom2', 'time')
 
     # Group frames by nearest EFIT timestep
@@ -102,10 +147,6 @@ def write_nnls_reconstruction(shot):
     frames_grouped = [[] for i in range(len(efit_times))]
     for i, frame in enumerate(frames):
         frames_grouped[efit_times.index(phantom_efit_times[i])].append(frame)
-
-    # remove in production!!!
-    #for i, group in enumerate(frames_grouped):
-    #    frames_grouped[i] = group[::700]
 
     # Load/calc+save field line images 
     fl_files = sorted(glob.glob('../cache/fl_images_Xpt_{}*'.format(shot)))
@@ -118,23 +159,34 @@ def write_nnls_reconstruction(shot):
     # Save field line images and phantom frames for julia
     for i, time in enumerate(efit_times):
         fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, i))
-        fl_matrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
+        if smoothing_param:
+            fl_matrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
+            fl_matrix = np.concatenate((fl_matrix, smoothing_param*np.identity(len(fl_images))))
+            frames_flattened = np.array([np.concatenate((f.flatten(), np.zeros(len(fl_images)))) for f in frames_grouped[i]])
+        else:
+            fl_matrix = np.transpose(np.array([fl.flatten().astype(float) for fl in fl_images]))
+            frames_flattened = np.array([f.flatten().astype(float) for f in frames_grouped[i]])
         np.save('../cache/fl_matrix_Xpt_{}_{}.npy'.format(shot, i), fl_matrix)
-        frames_flattened = np.array([f.flatten() for f in frames_grouped[i]])
         np.save('../cache/frames_Xpt_{}_{}.npy'.format(shot, i), frames_flattened)
 
     # Run julia and wait until completion
     print "STATUS: Invoking Julia for NNLS reconstruction"
-    os.system('julia -p 8 nnls.jl {} {}'.format(shot, len(efit_times)))
-    # Delete saved phantom frame files because they take up a lot of space
+    os.system('julia -p 8 nnls.jl {} {} {}'.format(shot, len(efit_times), smoothing_param))
+    # Delete files saved for julia
     os.system('rm -rf ../cache/frames_Xpt_{}*.npy'.format(shot))
+    os.system('rm -rf ../cache/fl_matrix_Xpt_{}*.npy'.format(shot))
 
     # Do not remove without removing old os.chdir call
     os.chdir(old_working_dir)
 
 
 def main():
-    write_nnls_reconstruction(1150611004)
+    for shot in [1150611004, 1150717011, 1150625030, 1150820011, 1150929013,
+                 1150929016, 1150923009, 1150923010, 1150923012, 1150923013,
+                 1150923017, 1160505008]:
+        write_nnls_reconstruction(shot)
+        write_nnls_reconstruction(shot, smoothing_param=1000)
+        acquire.Database().purge()
 
 
 if __name__ == '__main__':

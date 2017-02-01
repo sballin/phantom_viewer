@@ -12,7 +12,7 @@ class Database:
         for key in self.vids.keys(): del(self.vids[key])
 
 
-def video(shot, camera, sub=0, blur=0, sobel=False): 
+def video(shot, camera='phantom2', sub=0, blur=0, sobel=False): 
     key = str(shot) + camera
     try: out = Database().vids[key]
     except KeyError: 

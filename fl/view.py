@@ -276,7 +276,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
     plt.show()
 
 
-def slide_reconstruction(shot):
+def slide_reconstruction(shot, smoothing_param=0):
     """
     Slide through Phantom camera frames and their reconstructions from
     synthetic field line images calculated externally with Julia.
@@ -285,47 +285,44 @@ def slide_reconstruction(shot):
         shot: [int] shot number
         fl_sav: [scipy.io.idl.readsav object] containing field line images
     """
-    # Read cache files
+    # Read cache files broken up by EFIT time segment
     old_working_dir = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}*'.format(shot)))
+    emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}_sp{}*'.format(shot, smoothing_param)))
     emissivities = [np.load(f) for f in emissivity_files]
-    # Field line starting R, Z is the same for all times
-    fl_data_files = glob.glob('../cache/fl_data_Xpt_{}*'.format(shot))
-    fl_data = scipy.io.idl.readsav(fl_data_files[0])
+    fl_data_files = sorted(glob.glob('../cache/fl_data_Xpt_{}*'.format(shot)))
+    fl_data = [scipy.io.idl.readsav(f) for f in fl_data_files]
     fl_image_files = sorted(glob.glob('../cache/fl_images_Xpt_{}*'.format(shot)))
     fl_images = [np.load(f) for f in fl_image_files]
     os.chdir(old_working_dir)
 
-    time = acquire.gpi_series(shot, 'phantom2', 'time')
+    times = acquire.gpi_series(shot, 'phantom2', 'time')
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     frame_index = 0
-    fl_images = fl_sav.fl_image
-    fl_r = fl_sav.fieldline_r
-    fl_z = fl_sav.fieldline_z
+    fl_rs = [f.fieldline_r for f in fl_data]
+    fl_zs = [f.fieldline_z for f in fl_data]
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot)
-    efit_t_index = process.find_nearest(efit_times, time[0])
     machine_x, machine_y = acquire.machine_cross_section()
+    efit_t_index = process.find_nearest(efit_times, times[0])
+    efit_phantom_start_index = efit_t_index
+    previous_segments_frame_count = [sum([len(e) for e in emissivities[:t_index]]) for t_index in range(len(emissivities))]
 
-    em = np.load('out.npz')['arr_0']
-
-    geomatrix = np.transpose(np.array([fl.flatten() for fl in fl_images]))
-
-    r_space = np.linspace(min(fl_r), max(fl_r), 100)
-    z_space = np.linspace(min(fl_z), max(fl_z), 100)
-    r_grid, z_grid = np.meshgrid(r_space, z_space)
-    emissivity_grid = matplotlib.mlab.griddata(fl_r, fl_z, em[0].flatten(), r_grid,
-                                               z_grid, interp='linear') 
-
-    reconstructed = geomatrix.dot(em[0])
+    geomatrices = [np.transpose(np.array([fl.flatten() for fl in fl_image_set])) for fl_image_set in fl_images]
+    reconstructed = geomatrices[0].dot(emissivities[0][0])
     reconstructed = reconstructed.reshape((64,64))
-    target = frames[0]
     fig, ax = plt.subplots()
     
+    fl_r_all = np.concatenate(fl_rs)
+    fl_z_all = np.concatenate(fl_zs)
+    r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
+    z_space = np.linspace(np.min(fl_z_all), np.max(fl_z_all), 100)
+    r_grid, z_grid = np.meshgrid(r_space, z_space)
+    emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0].flatten(), r_grid, z_grid, interp='linear') 
+
     plt.subplot(221)
     plt.title('Divertor camera view')
-    plasma_image = plt.imshow(target, cmap=plt.cm.gist_heat, origin='bottom')
+    plasma_image = plt.imshow(frames[0], cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
     plt.colorbar()
     
@@ -337,23 +334,25 @@ def slide_reconstruction(shot):
     
     plt.subplot(223)
     plt.title('Reconstruction minus original')
-    error_image = plt.imshow(target - reconstructed, cmap=plt.cm.gist_heat, origin='bottom')
+    error_image = plt.imshow(frames[0] - reconstructed, cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
     plt.colorbar()
     
     plt.subplot(224)
     plt.title('Toroidal cross section')
-    emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid)
+    emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
     colorbar = plt.colorbar()
     colorbar.set_label('Relative emissivity')
     plt.axis('equal')
     plt.plot(machine_x, machine_y, color='gray')
-    l, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='fuchsia')
+    l, = plt.plot(rlcfs[efit_phantom_start_index], 
+                  zlcfs[efit_phantom_start_index], color='fuchsia', alpha=0.5)
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
     plt.xlabel('R (m)')
     plt.ylabel('Z (m)')
-    plt.contour(flux[efit_t_index], 100, extent=flux_extent)
+    plt.contour(flux[efit_t_index], 300, extent=flux_extent, alpha=0.5)
+    plt.gca().set_axis_bgcolor('black')
 
     gpi_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
     gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
@@ -365,20 +364,24 @@ def slide_reconstruction(shot):
     back_button = Button(back_button_area, '<')
 
     def update_data(val):
-        global frame_index, emissivity_grid, reconstructed
+        global efit_t_index, frame_index, emissivity_grid, reconstructed
         frame_index = int(val)
-        reconstructed = geomatrix.dot(em[frame_index]).reshape((64,64))
-        emissivity_grid = matplotlib.mlab.griddata(fl_r, fl_z, em[frame_index].flatten(), r_grid, 
-                                              z_grid, interp='linear')
+        # Recalculate things
+        efit_t_index = process.find_nearest(efit_times, times[frame_index])
+        efit_rel_index = efit_t_index - efit_phantom_start_index
+        frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
+        emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index].flatten(), r_grid, z_grid, interp='linear')
+        reconstructed = geomatrices[efit_rel_index].dot(emissivities[efit_rel_index][frame_rel_index]).reshape((64,64))
+
+        # Update canvas
         plasma_image.set_array(frames[frame_index])
         reconstruction_image.set_array(reconstructed)
         emissivity_image.set_array(emissivity_grid[:-1, :-1].ravel())
-        error_image.set_array(frames[frame_index]-reconstructed)
+        error_image.set_array(frames[frame_index] - reconstructed)
         error_image.autoscale()
         plasma_image.autoscale()
         reconstruction_image.autoscale()
         emissivity_image.autoscale()
-        efit_t_index = process.find_nearest(efit_times, time[frame_index])
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         fig.canvas.draw_idle()
