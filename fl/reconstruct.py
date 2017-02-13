@@ -104,7 +104,7 @@ def test_smoothing(shot, fl_sav):
 
 def test_julia():
     shot = 1150611004
-    smoothing_param = 1000
+    smoothing_param = 100
 
     frames = acquire.video(shot, 'phantom2', sub=20)[:100]
     fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, 0))
@@ -157,6 +157,7 @@ def write_nnls_reconstruction(shot, smoothing_param=0):
         fl_files = sorted(glob.glob('../cache/fl_images_Xpt_{}*'.format(shot)))
 
     # Save field line images and phantom frames for julia
+    efit_times = [efit_times[0]] # TEMPORARY PLS REMOVE ME LATER
     for i, time in enumerate(efit_times):
         fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, i))
         if smoothing_param:

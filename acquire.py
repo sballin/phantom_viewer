@@ -141,7 +141,7 @@ def extent(shot, camera):
     return [rmin, rmax, zmin, zmax]
 
 
-def x_pt_rz(shot):
+def xpt_rz(shot):
     """
     Return (R, Z) coordinate tuples of the lower X-point in m.
     """
@@ -151,19 +151,29 @@ def x_pt_rz(shot):
     return rseps[:, 0], zseps[:, 0]
                                    
 
-def time_flux_extent(shot):
-    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
-    time = efit_tree.getTimeBase()
-    flux = efit_tree.getFluxGrid()
-    rgrid = efit_tree.getRGrid()
-    zgrid = efit_tree.getZGrid()
+def time_flux_extent(shot, highres=False):
+    lowres_efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    if highres:
+        efit_tree = MDSplus.Tree('efit19', shot)
+        time = efit_tree.getNode('results.g_eqdsk.rbbbs').dim_of().data()
+        flux = efit_tree.getNode('results.g_eqdsk.psirz').data()
+    else:
+        time = lowres_efit_tree.getTimeBase()
+        flux = lowres_efit_tree.getFluxGrid()
+    rgrid = lowres_efit_tree.getRGrid()
+    zgrid = lowres_efit_tree.getZGrid()
     extent = [np.min(rgrid), np.max(rgrid), np.min(zgrid), np.max(zgrid)]
-    return time, flux, extent
+    return (time, flux, extent)
 
 
-def lcfs_rz(shot):
-    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
-    return efit_tree.getRLCFS(), efit_tree.getZLCFS()
+def lcfs_rz(shot, highres=False):
+    if highres:
+        efit_tree = MDSplus.Tree('efit19', shot)
+        return (efit_tree.getNode('results.g_eqdsk.rbbbs').data(), 
+                efit_tree.getNode('results.g_eqdsk.zbbbs').data())
+    else:
+        efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+        return efit_tree.getRLCFS(), efit_tree.getZLCFS()
 
 
 def machine_cross_section():

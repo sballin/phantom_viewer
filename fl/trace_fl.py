@@ -41,7 +41,7 @@ def make_fls(shot, time):
             flphi[fli] = CubicSpline(coarse[:len(fl.R)], fl.phi[:mxstep])(fine)
             fli += 1
 
-    return [flr, flz, flphi] 
+    return [flr, flz, flphi, rgrid, zgrid] 
 
 
 if __name__ == '__main__':

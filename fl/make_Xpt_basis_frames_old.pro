@@ -264,42 +264,43 @@ if camera_view eq 'X-pt' then begin
       endif
    endfor
 endif
-;if show_field_line then begin
-; the 34 (R) x 40 (Z) grid of basis fieldlines is created within the
-; python code tracer_fl with the following values
-;      n_fl_Z=40
-;      n_fl_R=34
-;      fl_R=0.495+0.115*(indgen(n_fl_R)/(n_fl_R-1.))
-;      fl_Z=-0.49+0.14*(indgen(n_fl_Z)/(n_fl_Z-1.))
-
-; note that the locations of the glowstick "fieldlines" are
-;      n_fl_Z=2
-;      n_fl_R=11
-;      fl_R_top_row=0.5097+indgen(n_fl_R)*0.00797 ; this is by measuring the top row of holes  and assumming the girdle is at 46.84 cm
-;      fl_Z=-0.4302+0.05459*indgen(n_fl_Z) ; this is by measuring the height of the holes and assumming the floor just beneath the girdle is at -47.53 cm
-;      fl_R_bot_row=0.5055+indgen(n_fl_R)*0.00793 ; this is by measuring the top row of holes  and assumming the girdle is at 46.84 cm
+if show_field_line then begin
+; create grid of possible basis fieldlines
+;   fl_Z=[-0.43,-0.43] ;fl_z=[-.479, -.346, -.479, -.346] ;[-0.365,-0.367,-0.421,-0.47]
+;   fl_R=[0.53,0.563]  ;fl_r=[.53, .53, .60, .60]
+;   ;[0.52,0.57,0.57,0.565]
+   if fl_shot ne 0 and fl_time ne 0 then begin
+      n_fl_Z=40
+      n_fl_R=34
+      fl_R=0.495+0.115*(indgen(n_fl_R)/(n_fl_R-1.))
+      fl_Z=-0.49+0.14*(indgen(n_fl_Z)/(n_fl_Z-1.))
+      fl_r_arr=fltarr(34,40,1000)
+      fl_z_arr=fltarr(34,40,1000)
+      fl_phi_arr=fltarr(34,40,1000)
+   endif else begin
+      ; these are the locations of the glowstick "fieldlines"
+      n_fl_Z=2
+      n_fl_R=11
+      fl_R_top_row=0.5097+indgen(n_fl_R)*0.00797 ; this is by measuring the top row of holes  and assumming the girdle is at 46.84 cm
+      fl_Z=-0.4302+0.05459*indgen(n_fl_Z) ; this is by measuring the height of the holes and assumming the floor just beneath the girdle is at -47.53 cm
+      fl_R_bot_row=0.5055+indgen(n_fl_R)*0.00793 ; this is by measuring the top row of holes  and assumming the girdle is at 46.84 cm
 ; The drawing shows that the top and bottom rows of holes should have been mades as
 ; fl_R=0.5137+0.008*indgen(n_fl_R) with fl_Z=-0.43+0.055*indgen(n_fl_Z)
-;      fl_R=fl_R_bot_row
+      fl_R=fl_R_bot_row
+   endelse
 
-asdf = Python.Run("import sys; sys.path.append('/home/sballinger/Desktop/phantom_viewer'); sys.path.append('/home/sballinger/Desktop/phantom_viewer/fl'); sys.path.append('/home/sballinger/Desktop/phantom_viewer/venv/lib/python2.7/site-packages')")
-flt = Python.Import("trace_fl") 
-fls = flt.make_fls(fl_shot, fl_time) ; CHANGE ME LATER
-fl_r=fls[3]                          ;fls[3] is rgrid in trace_fl and is defined to be the same as fl_R above
-n_fl_R=n_elements(fl_r)
-fl_z=fls[4]                          ;fls[4] is rgrid in trace_fl and is defined to be the same as fl_Z above
-n_fl_Z=n_elements(fl_z)
-for i=0,n_elements(fls[0,*])-1 do begin
-   rzphi2xyz,fls[0,i],fls[1,i],fls[2,i]/!dtor,xyzseg_fl
-   nseg_fl=1
-   lseg_fl=n_elements(fls[0,0])
-   colorseg_fl=intarr(nseg_fl)+4
+  asdf = Python.Run("import sys; sys.path.append('/home/sballinger/Desktop/phantom_viewer'); sys.path.append('/home/sballinger/Desktop/phantom_viewer/fl'); sys.path.append('/home/sballinger/Desktop/phantom_viewer/venv/lib/python2.7/site-packages')")
+  flt = Python.Import("trace_fl") 
+  fls = flt.make_fls(fl_shot, fl_time) 
+  rgrid = fls[3]
+  zgrid = fls[4]
+  for i=0,n_elements(fls[0,*])-1 do begin
+    rzphi2xyz,fls[0,i],fls[1,i],fls[2,i]/!dtor,xyzseg_fl
+    nseg_fl=1
+    lseg_fl=n_elements(fls[0,0])
+    colorseg_fl=intarr(nseg_fl)+4
    indexseg_fl=nseg+indgen(nseg_fl)
-   if abs(fls(0,i,-1)-fl_r(i MOD n_elements(fl_R))) lt 1e-6 then kk=-1 else kk=0
-; for reasons that are still unclear, trace_fl has the starting
-; position either as the first or the lasts element of the fls(n,m,*)
-; arrays. This must be something to do with the field direction
-   labelseg_fl=strarr(nseg_fl)+'fieldline'+strtrim(i,2)+'_'+sval(fls[0,i,kk],l=8)+'_'+sval(fls[1,i,kk],l=9)
+   labelseg_fl=strarr(nseg_fl)+'fieldline'+strtrim(i,2)+'_'+sval(rgrid[i],l=6)+'_'+sval(zgrid[i],l=7)
    _XYZseg=fltarr(3,max([lseg,lseg_fl]),nseg+nseg_fl)
    _XYZseg(*,0:max(lseg)-1,0:nseg-1)=XYZseg
    _XYZseg(*,0:max(lseg_fl)-1,nseg)=XYZseg_fl
@@ -309,8 +310,82 @@ for i=0,n_elements(fls[0,*])-1 do begin
    ColorSeg=[ColorSeg,ColorSeg_fl]
    LabelSeg=[LabelSeg,LabelSeg_fl]
    IndexSeg=[IndexSeg,IndexSeg_fl]
-endfor
+  endfor
+  stop
+  
+  goto,jump2
+ ;;  for i=0,n_fl_Z-1 do begin
+   for i=20,39,19 do begin
+      for ii=0,n_fl_r-1 do begin
 
+;; insert MAST field-line tracer below
+
+         if fl_shot ne 0 and fl_time ne 0 then SOL_LC,fl_shot,fl_time,reform(fl_R(ii)),reform(fl_Z(i)),0.5*!pi,0.01,LC,error,phipos=phi_cal+40.,plot=0,/limiters,cr=cr,cz=cz,cphi=cphi,/quiet else begin
+            if i eq 0 then _CR=fltarr(300)+fl_R_bot_row(ii)
+            if i eq 1 then _CR=fltarr(300)+fl_R_top_row(ii)
+            _CZ=fltarr(300)+fl_Z(i)
+            _CPhi=(phi_cal+40.-(indgen(300)*80./299.))*!dtor
+            goto,jump_fl
+         endelse
+
+         if error then goto,jump_fl
+; now make segments of this field line in the same format as the
+; machine feature segments. Remember:
+; XYZseg_CMOD is a [3,120,714] array of XYZ coordinates of tile
+; corners such that XYZseg_CMOD(3,i,j) are the XYZ coordinate vectors,
+; nseg is the number of coordinate vectors,
+; lseg(n) is the number of elements describing the path of the nth segment
+; colorseg (intarr(nseg)) is the plot color of that segment
+; labelseg=strarr(nseg)  &; text label that segment
+; indexseg=intarr(nseg)  &; index that segment
+         if cphi(1) gt cphi(0) then begin
+            SOL_LC,fl_shot,fl_time,reform(fl_R(ii)),$
+                   reform(fl_Z(i)),-0.5*!pi,0.01,LC,error,phipos=phi_cal+40,$
+                   plot=0,/limiters,cr=cr,cz=cz,cphi=cphi,/quiet
+            if error then goto,jump_fl
+            if cphi(1) gt cphi(0) then begin
+               print, 'at R,Z='+sval(fl_R(ii),l=5)+','+sval(fl_z(i),l=6)+$
+                      ' neither sol_lc direction gives a fieldline going in the correct direction, assuming fieldline is toroidal'
+               _CPhi=CPhi(0)+(((alpha/abs(alpha))*!pi/1.5)-CPhi(0))*findgen(100)/99.0
+               _CR=fltarr(100)+fl_R(ii)
+               _CZ=fltarr(100)+fl_z(i)
+               goto,jump_fl    
+            endif
+         endif
+         _CPhi=CPhi(0)+(CPhi(n_elements(CPhi)-1)-CPhi(0))*findgen(1000)/999.0
+         _CPhi=_Cphi(0:locate(_Cphi,_Cphi(0)+(alpha/abs(alpha))*!pi/1.5))
+         _CR=interpol(CR,CPhi,_CPhi)
+         _CZ=interpol(CZ,CPhi,_CPhi)
+         fl_r_arr(ii,i,0:n_elements(_cphi)-1)=_CR
+         fl_z_arr(ii,i,0:n_elements(_cphi)-1)=_CZ
+         fl_phi_arr(ii,i,0:n_elements(_cphi)-1)=_Cphi
+         print,n_elements(_cphi)
+
+         jump_fl:
+
+; insert MAST field-line tracer above
+
+         rzphi2xyz,_CR,_CZ,_Cphi/!dtor,xyzseg_fl
+         nseg_fl=1
+         lseg_fl=n_elements(_CPhi)
+         colorseg_fl=intarr(nseg_fl)+4
+         indexseg_fl=nseg+indgen(nseg_fl)
+         labelseg_fl=strarr(nseg_fl)+'fieldline'+strtrim(i*n_elements(fl_r)+ii+1,2)
+         _XYZseg=fltarr(3,max([lseg,lseg_fl]),nseg+nseg_fl)
+         _XYZseg(*,0:max(lseg)-1,0:nseg-1)=XYZseg
+         _XYZseg(*,0:max(lseg_fl)-1,nseg)=XYZseg_fl
+         XYZSeg=_XYZseg
+         nseg=nseg+nseg_fl
+         lseg=[lseg,lseg_fl]
+         ColorSeg=[ColorSeg,ColorSeg_fl]
+         LabelSeg=[LabelSeg,LabelSeg_fl]
+         IndexSeg=[IndexSeg,IndexSeg_fl]
+         if plot then plots,xyzseg_fl(0,*),xyzseg_fl(1,*),xyzseg_fl(2,*),/t3d,/data,color=4,thi=3
+      endfor
+   endfor
+   stop
+endif
+jump2:
 ;
 ; find those segments in the XYZseg array that are within the desired cone of the view, ie
 ; those vectors [XYZseg-xyz_eye] whose dot product with
@@ -536,8 +611,9 @@ if proj_onto_pixels and show_field_line then begin
 ;   ypix=nint((yseg_test-bl_corn(1))/(tr_corn(1)-bl_corn(1))*63.)
          xtest=(xseg(0:lseg_sub(fl_seg_ind(mmm))-1,fl_seg_ind(mmm))-bl_corn(0))/(tr_corn(0)-bl_corn(0))*63.
          ytest=(yseg(0:lseg_sub(fl_seg_ind(mmm))-1,fl_seg_ind(mmm))-bl_corn(1))/(tr_corn(1)-bl_corn(1))*63.
-         lll=where((abs(xtest-32.) lt 33.) and (abs(ytest-32.) lt 33.),n_lll)
-         if n_lll ge 30 then begin
+         lll=where((abs(xtest-32.) lt 36.) and (abs(ytest-32.) lt 36.),n_lll)
+;         if (labelseg_sub(fl_seg_ind(mmm)) eq'fieldline171') or (labelseg_sub(fl_seg_ind(mmm)) eq'fieldline172') or (labelseg_sub(fl_seg_ind(mmm)) eq'fieldline173') then stop
+         if n_lll ge 4 then begin
             if plot then plots,xseg(lll,fl_seg_ind(mmm)),yseg(lll,fl_seg_ind(mmm)),col=3,thi=2
             n_fl_seg(fl_count)=n_lll
             xpixfl(0:n_fl_seg(fl_count)-1,fl_count)=xtest(lll)
@@ -554,17 +630,8 @@ if proj_onto_pixels and show_field_line then begin
       r_ind=intarr(fl_count)
       z_ind=intarr(fl_count)
       for mmmm=0,fl_count-1 do begin
-;         z_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2))-1)/n_fl_R
-;         r_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2))-1)
-;         MOD n_fl_R
-; the above caused the bug Sean and I were experiencing 2/2017. It is
-; fixed by changing to the below. Typically it only moved the
-; fieldlines by one increment, but it showed up glaringly when
-; all 34 R's yielded fieldlines in the image, at which time
-; this error placed the 1st fieldline at the next Z at R=.61 m (the
-; max R) instead of being at R=0.495 m (the min R)  
-         z_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2)))/n_fl_R
-         r_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2))) MOD n_fl_R
+         z_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2))-1)/n_fl_R
+         r_ind(mmmm)=(int(strtrim(strmid(fl_label(mmmm),9,5),2))-1) MOD n_fl_R
          if mmmm eq 0 then begin
             _fl_map={fl_label:fl_label(0), fl_shot:fl_shot, fl_time:fl_time,$
             view_R:Rpin,view_Z:Zpin,view_phi:phipin, view_zrot:zrot,view_alpha:alpha,view_beta:beta,$
@@ -579,24 +646,63 @@ if proj_onto_pixels and show_field_line then begin
                if z_ind(mmmm) eq 0 then fl_map(mmmm).fl_R=fl_R_bot_row(r_ind(mmmm))
                if z_ind(mmmm) eq 1 then fl_map(mmmm).fl_R=fl_R_top_row(r_ind(mmmm))
             endelse
-            if abs(float(strtrim(strmid(fl_label(mmmm),strpos(fl_label(mmmm),'_')+1,8),2))-fl_R(r_ind(mmmm))) gt 1e-5 or $
-               abs(float(strtrim(strmid(fl_label(mmmm),strpos(fl_label(mmmm),'_')+10,8),2))-fl_Z(Z_ind(mmmm))) gt 1e-5 then $
-                  print,mmmm,' ',fl_label(mmmm),' ',fl_R(r_ind(mmmm)),' ',fl_Z(Z_ind(mmmm))
+;            stop
             fl_map(mmmm).n_fl_seg=n_fl_seg(mmmm)
             fl_map(mmmm).xpixfl=xpixfl(*,mmmm)
             fl_map(mmmm).ypixfl=ypixfl(*,mmmm)
          endelse
       endfor
+      ; fl_filename='../cache/fl_data_Xpt_'+strtrim(fl_shot,2)+'_'+strtrim(nint(fl_time*1000),2)+'ms.sav'
       fl_filename='../cache/fl_data_Xpt_'+strtrim(fl_shot,2)+'_'+segment+'.sav'
-      ; fl_filename='/home/terry/gpi/phantom/fl_data_Xpt_'+strtrim(fl_shot,2)+'_'+segment+'.sav'
+;       plotit=0
+;       ; create the image of the fieldline on a 64x64 pixel grid
+;       n_images=n_elements(fl_map(*).fl_shot)
+;       fl_image=intarr(64,64,n_images)
+;       smooth_param=7
+;       for i=0,n_images-1 do begin
+;          spline_p,(fl_map(i).xpixfl)[0:fl_map(i).n_fl_seg-1],(fl_map(i).ypixfl)[0:fl_map(i).n_fl_seg-1],xr,yr,interval=1.
+;          n_pts=n_elements(xr)
+;          for j=0,n_pts-1 do begin
+;             for k=0,63 do begin
+;                for l=0,63 do begin
+; ;            a=abs(k-(fl_map(i).xpixfl)[j]) & b=abs(l-(fl_map(i).ypixfl)[j])
+;                   a=abs(k-xr(j)) & b=abs(l-yr(j))
+; ;            if (a le 2. and  b le 2.) then fl_image(k,l,i)=1000./(sqrt(a^2+b^2) > 1.)
+;                   if sqrt(a^2+b^2) le 2 then fl_image(k,l,i)=(1000./(sqrt(a^2+b^2) > 1.) < 1000.)
+;                endfor
+;             endfor
+;          endfor
+;          fl_image(*,*,i)=smooth(fl_image(*,*,i),smooth_param,/edge_trunc)
+;          if plotit then begin
+;             loadct,45,/sil
+;             window,1,xsize=500,ysize=500
+;             plot,indgen(10),xra=[0,64],yra=[0,64],/nodata,col=1,xst=1,ysty=1
+;             plots,(fl_map(i).xpixfl)[0:fl_map(i).n_fl_seg-1],(fl_map(i).ypixfl)[0:fl_map(i).n_fl_seg-1],col=2
+;             plots,xr,yr,col=4
+;             loadct,3,/sil
+;             window,0,xsize=320,ysize=320
+;             tvscl,rebin(fl_image(*,*,i),5*64,5*64) & xyouts,4,300,/dev,sval(fl_map(i).fl_R*100.,l=5)+','+sval(fl_map(i).fl_Z*100,l=6),charsiz=1.5,col=255
+;          endif
+;       endfor
+;       if plotit then begin
+;          for i=0,n_images-1 do begin
+;             tvscl,rebin(fl_image(*,*,i),5*64,5*64) 
+;             xyouts,4,300,/dev,sval(fl_map(i).fl_R*100.,l=5)+','+sval(fl_map(i).fl_Z*100,l=6),charsiz=1.5,col=255 
+;             wait,0.1
+;          endfor
+;       endif
       shot=fl_map(0).fl_shot
       time=fl_map(0).fl_time
       fieldline_R=fl_map(*).fl_R
       fieldline_Z=fl_map(*).fl_Z
-      fieldline_phi_start=fl_map(0).phipin
+      fieldline_phi_start=fl_map(0).phipin;stop
 ;  write structure to saveset
+      ; save,file=fl_filename,shot,time,fieldline_R,fieldline_Z,fieldline_phi_start,fl_image,fl_map
       save,file=fl_filename,fieldline_R,fieldline_Z,fieldline_phi_start,fl_map
+
+      ;print,'wrote the save set fl_images_of_Xpt_fieldlines_'+strtrim(fl_shot,2)+'_'+strtrim(nint(fl_time*1000),2)+'ms.sav'
    endif
+;stop
 endif
 
 finish:

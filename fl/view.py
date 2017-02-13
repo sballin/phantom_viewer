@@ -3,6 +3,7 @@ import scipy.io.idl
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import animation
 from matplotlib.widgets import Slider, Button
 from phantom_viewer import acquire
 from phantom_viewer import signals
@@ -276,7 +277,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
     plt.show()
 
 
-def slide_reconstruction(shot, smoothing_param=0):
+def slide_reconstruction(shot, smoothing_param=0, save=False):
     """
     Slide through Phantom camera frames and their reconstructions from
     synthetic field line images calculated externally with Julia.
@@ -288,17 +289,17 @@ def slide_reconstruction(shot, smoothing_param=0):
     # Read cache files broken up by EFIT time segment
     old_working_dir = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}_sp{}*'.format(shot, smoothing_param)))
+    emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}_sp{}_*'.format(shot, smoothing_param)))
     emissivities = [np.load(f) for f in emissivity_files]
-    fl_data_files = sorted(glob.glob('../cache/fl_data_Xpt_{}*'.format(shot)))
+    fl_data_files = sorted(glob.glob('../cache/fl_data_Xpt_{}_*'.format(shot)))
     fl_data = [scipy.io.idl.readsav(f) for f in fl_data_files]
-    fl_image_files = sorted(glob.glob('../cache/fl_images_Xpt_{}*'.format(shot)))
+    fl_image_files = sorted(glob.glob('../cache/fl_images_Xpt_{}_*'.format(shot)))
     fl_images = [np.load(f) for f in fl_image_files]
     os.chdir(old_working_dir)
 
+    frame_index = 0
     times = acquire.gpi_series(shot, 'phantom2', 'time')
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
-    frame_index = 0
     fl_rs = [f.fieldline_r for f in fl_data]
     fl_zs = [f.fieldline_z for f in fl_data]
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
@@ -311,14 +312,31 @@ def slide_reconstruction(shot, smoothing_param=0):
     geomatrices = [np.transpose(np.array([fl.flatten() for fl in fl_image_set])) for fl_image_set in fl_images]
     reconstructed = geomatrices[0].dot(emissivities[0][0])
     reconstructed = reconstructed.reshape((64,64))
-    fig, ax = plt.subplots()
+    
+    # fl_rsold = fl_rs[0]
+    # for loc in np.where(fl_rs[0] > .59):
+    #     fl_rs[0] = np.delete(fl_rs[0], loc)
+    #     fl_zs[0] = np.delete(fl_zs[0], loc)
+    #     newemissivities = np.delete(emissivities[0][0], loc)
     
     fl_r_all = np.concatenate(fl_rs)
     fl_z_all = np.concatenate(fl_zs)
     r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
     z_space = np.linspace(np.min(fl_z_all), np.max(fl_z_all), 100)
     r_grid, z_grid = np.meshgrid(r_space, z_space)
-    emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0].flatten(), r_grid, z_grid, interp='linear') 
+    emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
+    
+    # import scipy.interpolate
+    # points = np.zeros((fl_rs[0].shape[0], 2))
+    # for i, _  in enumerate(fl_rs[0]):
+    #     points[i, 0] = fl_rs[0][i]
+    #     points[i, 1] = fl_zs[0][i]
+    # emissivity_grid = scipy.interpolate.griddata(points, emissivities[0][0], (r_grid, z_grid), method='linear', fill_value=0) 
+
+    # Draw figure using first frame
+    fig, ax = plt.subplots()
+    title = plt.suptitle('Shot {} frame {}'.format(shot, 0))
+    plt.tight_layout(rect=(0, .1, 1, .9))
 
     plt.subplot(221)
     plt.title('Divertor camera view')
@@ -333,7 +351,7 @@ def slide_reconstruction(shot, smoothing_param=0):
     plt.colorbar()
     
     plt.subplot(223)
-    plt.title('Reconstruction minus original')
+    plt.title('Original minus reconstruction')
     error_image = plt.imshow(frames[0] - reconstructed, cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
     plt.colorbar()
@@ -346,7 +364,7 @@ def slide_reconstruction(shot, smoothing_param=0):
     plt.axis('equal')
     plt.plot(machine_x, machine_y, color='gray')
     l, = plt.plot(rlcfs[efit_phantom_start_index], 
-                  zlcfs[efit_phantom_start_index], color='fuchsia', alpha=0.5)
+                  zlcfs[efit_phantom_start_index], color='orange', alpha=0.5)
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
     plt.xlabel('R (m)')
@@ -354,59 +372,151 @@ def slide_reconstruction(shot, smoothing_param=0):
     plt.contour(flux[efit_t_index], 300, extent=flux_extent, alpha=0.5)
     plt.gca().set_axis_bgcolor('black')
 
-    gpi_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
-    gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
-                        valinit=0)
-    gpi_slider.valfmt = '%d'
-    forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
-    forward_button = Button(forward_button_area, '>')
-    back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
-    back_button = Button(back_button_area, '<')
+    if not save:
+        gpi_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
+        gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
+                            valinit=0)
+        gpi_slider.valfmt = '%d'
+        forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
+        forward_button = Button(forward_button_area, '>')
+        back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
+        back_button = Button(back_button_area, '<')
 
-    def update_data(val):
-        global efit_t_index, frame_index, emissivity_grid, reconstructed
+    def update(val):
+        global efit_t_index, frame_index
         frame_index = int(val)
+
         # Recalculate things
         efit_t_index = process.find_nearest(efit_times, times[frame_index])
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
-        emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index].flatten(), r_grid, z_grid, interp='linear')
+        emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index], r_grid, z_grid, interp='linear') 
         reconstructed = geomatrices[efit_rel_index].dot(emissivities[efit_rel_index][frame_rel_index]).reshape((64,64))
 
         # Update canvas
         plasma_image.set_array(frames[frame_index])
+        plasma_image.autoscale()
         reconstruction_image.set_array(reconstructed)
+        reconstruction_image.autoscale()
         emissivity_image.set_array(emissivity_grid[:-1, :-1].ravel())
+        emissivity_image.autoscale()
         error_image.set_array(frames[frame_index] - reconstructed)
         error_image.autoscale()
-        plasma_image.autoscale()
-        reconstruction_image.autoscale()
-        emissivity_image.autoscale()
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         fig.canvas.draw_idle()
+        title.set_text('Shot {} frame {}'.format(shot, frame_index))
 
     def forward(event):
         global frame_index
-        frame_index += 1
-        update_data(frame_index)
+        gpi_slider.set_val(frame_index + 1)
 
     def backward(event):
         global frame_index
-        frame_index -= 1
-        update_data(frame_index)
+        gpi_slider.set_val(frame_index - 1)
 
-    gpi_slider.on_changed(update_data)
-    forward_button.on_clicked(forward)
-    back_button.on_clicked(backward)
+    if not save:
+        gpi_slider.on_changed(update)
+        forward_button.on_clicked(forward)
+        back_button.on_clicked(backward)
 
-    plt.tight_layout(rect=(0, .1, 1, .9))
-    plt.show()
+    if save:
+        FFMpegWriter = animation.writers['ffmpeg']
+        writer = FFMpegWriter(fps=15, bitrate=5000)
+        anim = animation.FuncAnimation(fig, update, frames=1000, interval=5, blit=False)
+        anim.save('{}_sp{}.avi'.format(shot, smoothing_param), writer=writer)
+        plt.close(fig)
+    else:
+        plt.show()
+
+
+def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False):
+    # Read cache files broken up by EFIT time segment
+    old_working_dir = os.getcwd()
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}_sp{}_*'.format(shot, smoothing_param)))
+    emissivities = [np.load(f) for f in emissivity_files]
+    fl_data_files = sorted(glob.glob('../cache/fl_data_Xpt_{}_*'.format(shot)))
+    fl_data = [scipy.io.idl.readsav(f) for f in fl_data_files]
+    os.chdir(old_working_dir)
+    fl_rs = [f.fieldline_r for f in fl_data]
+    fl_zs = [f.fieldline_z for f in fl_data]
+    rlcfs, zlcfs = acquire.lcfs_rz(shot, highres=highres)
+
+    frame_index = 0
+    times = acquire.gpi_series(shot, 'phantom2', 'time')
+    efit_times, flux, flux_extent = acquire.time_flux_extent(shot, highres=False)
+    if highres:
+        efit_times_highres, flux, _ = acquire.time_flux_extent(shot, highres=True)
+        efit_t_index_highres = process.find_nearest(efit_times_highres, times[0])
+    efit_t_index = process.find_nearest(efit_times, times[0])
+    efit_phantom_start_index = efit_t_index
+    previous_segments_frame_count = [sum([len(e) for e in emissivities[:t_index]]) for t_index in range(len(emissivities))]
+    machine_x, machine_y = acquire.machine_cross_section()
+
+    fl_r_all = np.concatenate(fl_rs)
+    fl_z_all = np.concatenate(fl_zs)
+    r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
+    z_space = np.linspace(np.min(fl_z_all), np.max(fl_z_all), 100)
+    r_grid, z_grid = np.meshgrid(r_space, z_space)
+    emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
+
+    fig = plt.figure()
+    title = plt.title('Shot {} frame {}'.format(shot, 0))
+    emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
+    colorbar = plt.colorbar()
+    colorbar.set_label('Relative emissivity')
+    plt.plot(machine_x, machine_y, color='gray')
+    if highres:
+        l, = plt.plot(rlcfs[:, efit_t_index_highres], 
+                      zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
+    else:
+        l, = plt.plot(rlcfs[efit_phantom_start_index], 
+                      zlcfs[efit_phantom_start_index], color='orange', alpha=0.5)
+    plt.axis('equal')
+    plt.xlim([.49, .62])
+    plt.ylim([-.50, -.33])
+    plt.xlabel('R (m)')
+    plt.ylabel('Z (m)')
+    plt.contour(flux[efit_t_index], 300, extent=flux_extent, alpha=0.5)
+    plt.gca().set_axis_bgcolor('black')
+
+    def update(val):
+        global efit_t_index, frame_index
+        frame_index = int(val)
+
+        # Recalculate things
+        efit_t_index = process.find_nearest(efit_times, times[frame_index])
+        efit_rel_index = efit_t_index - efit_phantom_start_index
+        frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
+        emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index], r_grid, z_grid, interp='linear') 
+        if highres:
+            efit_t_index_highres = process.find_nearest(efit_times_highres, times[frame_index])
+
+        # Update canvas
+        emissivity_image.set_array(emissivity_grid[:-1, :-1].ravel())
+        emissivity_image.autoscale()
+        if highres:
+            l.set_xdata(rlcfs[:, efit_t_index_highres])
+            l.set_ydata(zlcfs[:, efit_t_index_highres])
+        else:
+            l.set_xdata(rlcfs[efit_t_index])
+            l.set_ydata(zlcfs[efit_t_index])
+        fig.canvas.draw_idle()
+        title.set_text('Shot {} frame {}'.format(shot, frame_index))
+
+    FFMpegWriter = animation.writers['ffmpeg']
+    writer = FFMpegWriter(fps=15, bitrate=5000)
+    anim = animation.FuncAnimation(fig, update, frames=num_frames, interval=5, blit=False)
+    anim.save('{}_sp{}_emissivity.avi'.format(shot, smoothing_param), writer=writer)
+    plt.close(fig)
 
    
 def main():
-    shot = 1150611004 #1150923010 
-    slide_reconstruction(shot)
+    shot = 1150611004
+    animate_emissivity(shot, smoothing_param=0)
+    animate_emissivity(shot, smoothing_param=100)
+    animate_emissivity(shot, smoothing_param=1000)
 
 if __name__ == '__main__':
     main()
