@@ -443,8 +443,11 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     fl_zs = [f.fieldline_z for f in fl_data]
     rlcfs, zlcfs = acquire.lcfs_rz(shot, highres=highres)
 
-    frame_index = 0
+    # Get standard data
     times = acquire.gpi_series(shot, 'phantom2', 'time')
+    machine_x, machine_y = acquire.machine_cross_section()
+    
+    # Set up indices and get flux data
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot, highres=False)
     if highres:
         efit_times_highres, flux, _ = acquire.time_flux_extent(shot, highres=True)
@@ -452,8 +455,9 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     efit_t_index = process.find_nearest(efit_times, times[0])
     efit_phantom_start_index = efit_t_index
     previous_segments_frame_count = [sum([len(e) for e in emissivities[:t_index]]) for t_index in range(len(emissivities))]
-    machine_x, machine_y = acquire.machine_cross_section()
+    frame_index = 0
 
+    # Set up grid on which to display emissivity profile
     fl_r_all = np.concatenate(fl_rs)
     fl_z_all = np.concatenate(fl_zs)
     r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
@@ -461,6 +465,7 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     r_grid, z_grid = np.meshgrid(r_space, z_space)
     emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
 
+    # Plot things
     fig = plt.figure()
     title = plt.title('Shot {} frame {}'.format(shot, 0))
     emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
@@ -468,11 +473,11 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     colorbar.set_label('Relative emissivity')
     plt.plot(machine_x, machine_y, color='gray')
     if highres:
-        l, = plt.plot(rlcfs[:, efit_t_index_highres], 
-                      zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
+        lcfs, = plt.plot(rlcfs[:, efit_t_index_highres], 
+                         zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
     else:
-        l, = plt.plot(rlcfs[efit_phantom_start_index], 
-                      zlcfs[efit_phantom_start_index], color='orange', alpha=0.5)
+        lcfs, = plt.plot(rlcfs[efit_phantom_start_index], 
+                         zlcfs[efit_phantom_start_index], color='orange', alpha=0.5)
     plt.axis('equal')
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
@@ -497,14 +502,15 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
         emissivity_image.set_array(emissivity_grid[:-1, :-1].ravel())
         emissivity_image.autoscale()
         if highres:
-            l.set_xdata(rlcfs[:, efit_t_index_highres])
-            l.set_ydata(zlcfs[:, efit_t_index_highres])
+            lcfs.set_xdata(rlcfs[:, efit_t_index_highres])
+            lcfs.set_ydata(zlcfs[:, efit_t_index_highres])
         else:
-            l.set_xdata(rlcfs[efit_t_index])
-            l.set_ydata(zlcfs[efit_t_index])
+            lcfs.set_xdata(rlcfs[efit_t_index])
+            lcfs.set_ydata(zlcfs[efit_t_index])
         fig.canvas.draw_idle()
         title.set_text('Shot {} frame {}'.format(shot, frame_index))
 
+    # Save animation to file
     FFMpegWriter = animation.writers['ffmpeg']
     writer = FFMpegWriter(fps=15, bitrate=5000)
     anim = animation.FuncAnimation(fig, update, frames=num_frames, interval=5, blit=False)
