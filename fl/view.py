@@ -10,6 +10,7 @@ from phantom_viewer import signals
 from phantom_viewer import process
 import scipy.optimize
 import glob
+import types
 
 
 def make_colormap(seq):
@@ -431,6 +432,13 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
 
 
 def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False):
+        
+    def setvisible(self, vis):
+        for c in self.collections: c.set_visible(vis)
+        
+    def setanimated(self, ani):
+        for c in self.collections: c.set_animated(ani)
+        
     # Read cache files broken up by EFIT time segment
     old_working_dir = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -465,64 +473,68 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     r_grid, z_grid = np.meshgrid(r_space, z_space)
     emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
 
-    # Plot things
-    fig = plt.figure()
-    title = plt.title('Shot {} frame {}'.format(shot, 0))
+    # Plotting setup
+    fig, ax = plt.subplots()
     emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
-    colorbar = plt.colorbar()
-    colorbar.set_label('Relative emissivity')
-    plt.plot(machine_x, machine_y, color='gray')
-    if highres:
-        lcfs, = plt.plot(rlcfs[:, efit_t_index_highres], 
-                         zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
-    else:
-        lcfs, = plt.plot(rlcfs[efit_phantom_start_index], 
-                         zlcfs[efit_phantom_start_index], color='orange', alpha=0.5)
     plt.axis('equal')
     plt.xlim([.49, .62])
     plt.ylim([-.50, -.33])
     plt.xlabel('R (m)')
     plt.ylabel('Z (m)')
-    plt.contour(flux[efit_t_index], 300, extent=flux_extent, alpha=0.5)
     plt.gca().set_axis_bgcolor('black')
-
-    def update(val):
-        global efit_t_index, frame_index
-        frame_index = int(val)
-
-        # Recalculate things
+    machine, = plt.plot(machine_x, machine_y, color='gray')
+    
+    previous_efit_t_index = -1
+    plots = [0]*num_frames
+    
+    # Compute plot elements for each frame
+    for frame_index in range(num_frames):
         efit_t_index = process.find_nearest(efit_times, times[frame_index])
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
+        
+        # Plot emissivity grid
         emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index], r_grid, z_grid, interp='linear') 
+        emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
+        emissivity_image.autoscale()
+        
+        # Plot LCFS and flux contours
         if highres:
             efit_t_index_highres = process.find_nearest(efit_times_highres, times[frame_index])
-
-        # Update canvas
-        emissivity_image.set_array(emissivity_grid[:-1, :-1].ravel())
-        emissivity_image.autoscale()
-        if highres:
-            lcfs.set_xdata(rlcfs[:, efit_t_index_highres])
-            lcfs.set_ydata(zlcfs[:, efit_t_index_highres])
-        else:
-            lcfs.set_xdata(rlcfs[efit_t_index])
-            lcfs.set_ydata(zlcfs[efit_t_index])
-        fig.canvas.draw_idle()
-        title.set_text('Shot {} frame {}'.format(shot, frame_index))
+            if efit_t_index_highres > previous_efit_t_index:
+                lcfs, = plt.plot(rlcfs[:, efit_t_index_highres], zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
+                flux_surfaces = plt.contour(flux[efit_t_index_highres], 300, extent=flux_extent, alpha=0.5)               
+                # Monkey patch to enable animation for QuadContourSet objects
+                flux_surfaces.set_visible = types.MethodType(setvisible, flux_surfaces)
+                flux_surfaces.set_animated = types.MethodType(setanimated, flux_surfaces)
+                flux_surfaces.axes = plt.gca()
+                previous_efit_t_index = efit_t_index_highres
+        elif efit_t_index > previous_efit_t_index:
+            lcfs, = plt.plot(rlcfs[efit_t_index], zlcfs[efit_t_index], color='orange', alpha=0.5)
+            flux_surfaces = plt.contour(flux[efit_t_index], 300, extent=flux_extent, alpha=0.5)       
+            # Monkey patch to enable animation for QuadContourSet objects
+            flux_surfaces.set_visible = types.MethodType(setvisible,flux_surfaces)
+            flux_surfaces.set_animated = types.MethodType(setanimated,flux_surfaces)
+            flux_surfaces.axes = plt.gca()
+            previous_efit_t_index = efit_t_index
+            
+        text = 'Shot {} frame {}'.format(shot, frame_index)
+        axtext = ax.text(90, 90, text)
+        annotation = ax.annotate(text, xy=(0.35, 1.05), xycoords='axes fraction')
+        plots[frame_index] = [lcfs, flux_surfaces, emissivity_image, machine, axtext, annotation]
 
     # Save animation to file
     FFMpegWriter = animation.writers['ffmpeg']
     writer = FFMpegWriter(fps=15, bitrate=5000)
-    anim = animation.FuncAnimation(fig, update, frames=num_frames, interval=5, blit=False)
+    anim = animation.ArtistAnimation(fig, plots, interval=5, blit=False)
     anim.save('{}_sp{}_emissivity.avi'.format(shot, smoothing_param), writer=writer)
     plt.close(fig)
 
    
 def main():
     shot = 1150611004
-    animate_emissivity(shot, smoothing_param=0)
-    animate_emissivity(shot, smoothing_param=100)
-    animate_emissivity(shot, smoothing_param=1000)
+    animate_emissivity(shot, num_frames=100, highres=True)
+
 
 if __name__ == '__main__':
     main()
