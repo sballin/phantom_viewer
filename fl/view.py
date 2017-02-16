@@ -313,13 +313,7 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
     geomatrices = [np.transpose(np.array([fl.flatten() for fl in fl_image_set])) for fl_image_set in fl_images]
     reconstructed = geomatrices[0].dot(emissivities[0][0])
     reconstructed = reconstructed.reshape((64,64))
-    
-    # fl_rsold = fl_rs[0]
-    # for loc in np.where(fl_rs[0] > .59):
-    #     fl_rs[0] = np.delete(fl_rs[0], loc)
-    #     fl_zs[0] = np.delete(fl_zs[0], loc)
-    #     newemissivities = np.delete(emissivities[0][0], loc)
-    
+
     fl_r_all = np.concatenate(fl_rs)
     fl_z_all = np.concatenate(fl_zs)
     r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
@@ -327,13 +321,6 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
     r_grid, z_grid = np.meshgrid(r_space, z_space)
     emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
     
-    # import scipy.interpolate
-    # points = np.zeros((fl_rs[0].shape[0], 2))
-    # for i, _  in enumerate(fl_rs[0]):
-    #     points[i, 0] = fl_rs[0][i]
-    #     points[i, 1] = fl_zs[0][i]
-    # emissivity_grid = scipy.interpolate.griddata(points, emissivities[0][0], (r_grid, z_grid), method='linear', fill_value=0) 
-
     # Draw figure using first frame
     fig, ax = plt.subplots()
     title = plt.suptitle('Shot {} frame {}'.format(shot, 0))
