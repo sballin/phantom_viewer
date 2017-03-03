@@ -73,7 +73,6 @@ key_default,plot,0
 key_default,ps,0
 
 port_names=['A','B','C','D','E','F','G','H','J','K']
-loadct,45,/sil
 if ps then begin
   pso
 endif
