@@ -22,17 +22,20 @@ def video(shot, camera='phantom2', sub=0, blur=0, sobel=False):
         else: out = Database().vids[key] = other_video(shot, camera)
     if sub: 
         key += 'sub%d' % sub
-        try: out = Database().vids[key] 
+        try: 
+            out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] = process.subtract_min(out, sub)
     if blur:
         key += 'gauss%d' % blur
-        try: out = Database().vids[key] 
+        try: 
+            out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] = process.gauss(np.copy(out), blur)
     if sobel: 
         key += 'sobel'
-        try: out = Database().vids[key] 
+        try: 
+            out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] \
                 = process.kill_sobel_edges(process.sobel(np.copy(out)))
@@ -65,10 +68,7 @@ def gpi_series(shot, camera, series_name):
             return np.arange(start, start + num_frames/float(frame_rate), 
                              1./frame_rate)
     else: 
-        try: 
-            series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
-        except MDSplus._tdishr.TdiException: 
-            sys.exit('ERROR loading %s' % series_name)
+        series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
     return series 
 
 
@@ -80,10 +80,7 @@ def other_video(shot, camera='raspi2'):
         camera: string e.g. 'raspi2', 'matrox2', 'matrox3'
     """
     tree = MDSplus.Tree('spectroscopy', shot)
-    try: series = tree.getNode('video_daq.%s.frames' % camera).data()
-    except MDSplus._tdishr.TdiException: 
-        sys.exit('ERROR loading frames')
-    return series 
+    return tree.getNode('video_daq.%s.frames' % camera).data()
 
 
 def time_ha2(shot):
