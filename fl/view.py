@@ -34,7 +34,7 @@ def make_colormap(seq):
     return matplotlib.colors.LinearSegmentedColormap('CustomMap', cdict)
 
 
-def slide_reconstruct_corr(shot, fl_sav):
+def slide_correlation(shot, fl_sav):
     """
     Slide through Phantom camera frames using given synthetic field line images 
     to create a reconstruction of the original using cross-correlation to find
@@ -52,7 +52,7 @@ def slide_reconstruct_corr(shot, fl_sav):
     fl_z = fl_sav.fieldline_z
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot)
-    efit_t_index = process.find_nearest(efit_times, time[0])
+    efit_t_index = process.find_nearest(efit_times, time[0], ordered=True)
     machine_x, machine_y = acquire.machine_cross_section()
 
     # Find cross-correlation scores between frames and field line images
@@ -102,10 +102,10 @@ def slide_reconstruct_corr(shot, fl_sav):
     fl_slider = Slider(fl_slide_area, 'Correlation rank', 0, len(fls)-1, 
                        valinit=0)
     fl_slider.valfmt = '%d'
-    gpi_slide_area = plt.axes([0.20, 0.06, 0.60, 0.03])
-    gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
+    phantom_slide_area = plt.axes([0.20, 0.06, 0.60, 0.03])
+    phantom_slider = Slider(phantom_slide_area, 'Camera frame', 0, len(frames)-1,
                         valinit=0)
-    gpi_slider.valfmt = '%d'
+    phantom_slider.valfmt = '%d'
     forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
     forward_button = Button(forward_button_area, '>')
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
@@ -124,7 +124,7 @@ def slide_reconstruct_corr(shot, fl_sav):
     def update_images(val):
         global frame_index, indices, xcorr_grid
         val = int(val)
-        efit_t_index = process.find_nearest(efit_times, time[frame_index])
+        efit_t_index = process.find_nearest(efit_times, time[frame_index], ordered=True)
         plasma_image.set_array(frames[frame_index])
         plasma_image.autoscale()
         fl_image.set_array(fls[indices[val]])
@@ -147,7 +147,7 @@ def slide_reconstruct_corr(shot, fl_sav):
         update_data(frame_index)
     
     fl_slider.on_changed(update_images)
-    gpi_slider.on_changed(update_data)
+    phantom_slider.on_changed(update_data)
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
@@ -155,7 +155,7 @@ def slide_reconstruct_corr(shot, fl_sav):
     plt.show()
         
         
-def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
+def slide_reconstruct(shot, fl_sav, smoothing_param=100):
     """
     Slide through Phantom camera frames using given synthetic field line images 
     to create a reconstruction of the original using non-negative least squares
@@ -175,7 +175,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
     fl_z = fl_sav.fieldline_z
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot)
-    efit_t_index = process.find_nearest(efit_times, time[0])
+    efit_t_index = process.find_nearest(efit_times, time[0], ordered=True)
     machine_x, machine_y = acquire.machine_cross_section()
 
     inversion_func = scipy.optimize.nnls
@@ -229,10 +229,10 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
     plt.ylabel('Z (m)')
     plt.contour(flux[efit_t_index], 100, extent=flux_extent)
 
-    gpi_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
-    gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
+    phantom_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
+    phantom_slider = Slider(phantom_slide_area, 'Camera frame', 0, len(frames)-1,
                         valinit=0)
-    gpi_slider.valfmt = '%d'
+    phantom_slider.valfmt = '%d'
     forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
     forward_button = Button(forward_button_area, '>')
     back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
@@ -255,7 +255,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
         plasma_image.autoscale()
         reconstruction_image.autoscale()
         emissivity_image.autoscale()
-        efit_t_index = process.find_nearest(efit_times, time[frame_index])
+        efit_t_index = process.find_nearest(efit_times, time[frame_index], ordered=True)
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
         fig.canvas.draw_idle()
@@ -270,7 +270,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
         frame_index -= 1
         update_data(frame_index)
 
-    gpi_slider.on_changed(update_data)
+    phantom_slider.on_changed(update_data)
     forward_button.on_clicked(forward)
     back_button.on_clicked(backward)
 
@@ -278,7 +278,7 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=5000):
     plt.show()
 
 
-def slide_reconstruction(shot, smoothing_param=0, save=False):
+def slide_reconstruction(shot, smoothing_param=100, save=False):
     """
     Slide through Phantom camera frames and their reconstructions from
     synthetic field line images calculated externally with Julia.
@@ -291,10 +291,12 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
     old_working_dir = os.getcwd()
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     emissivity_files = sorted(glob.glob('../cache/fl_emissivities_Xpt_{}_sp{}_*'.format(shot, smoothing_param)))
-    emissivities = [np.load(f) for f in emissivity_files]
     fl_data_files = sorted(glob.glob('../cache/fl_data_Xpt_{}_*'.format(shot)))
-    fl_data = [scipy.io.idl.readsav(f) for f in fl_data_files]
     fl_image_files = sorted(glob.glob('../cache/fl_images_Xpt_{}_*'.format(shot)))
+    if len(emissivity_files) == 0 or len(fl_data_files) == 0 or len(fl_image_files) == 0:
+        raise Exception('Could not find files necessary to view reconstruction')
+    emissivities = [np.load(f) for f in emissivity_files]
+    fl_data = [scipy.io.idl.readsav(f) for f in fl_data_files]
     fl_images = [np.load(f) for f in fl_image_files]
     os.chdir(old_working_dir)
 
@@ -306,7 +308,7 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot)
     machine_x, machine_y = acquire.machine_cross_section()
-    efit_t_index = process.find_nearest(efit_times, times[0])
+    efit_t_index = process.find_nearest(efit_times, times[0], ordered=True)
     efit_phantom_start_index = efit_t_index
     previous_segments_frame_count = [sum([len(e) for e in emissivities[:t_index]]) for t_index in range(len(emissivities))]
 
@@ -361,10 +363,10 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
     plt.gca().set_axis_bgcolor('black')
 
     if not save:
-        gpi_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
-        gpi_slider = Slider(gpi_slide_area, 'Camera frame', 0, len(frames)-1,
+        phantom_slide_area = plt.axes([0.20, 0.02, 0.60, 0.03])
+        phantom_slider = Slider(phantom_slide_area, 'Camera frame', 0, len(frames)-1,
                             valinit=0)
-        gpi_slider.valfmt = '%d'
+        phantom_slider.valfmt = '%d'
         forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
         forward_button = Button(forward_button_area, '>')
         back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
@@ -375,7 +377,7 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
         frame_index = int(val)
 
         # Recalculate things
-        efit_t_index = process.find_nearest(efit_times, times[frame_index])
+        efit_t_index = process.find_nearest(efit_times, times[frame_index], ordered=True)
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
         emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index], r_grid, z_grid, interp='linear') 
@@ -397,14 +399,14 @@ def slide_reconstruction(shot, smoothing_param=0, save=False):
 
     def forward(event):
         global frame_index
-        gpi_slider.set_val(frame_index + 1)
+        phantom_slider.set_val(frame_index + 1)
 
     def backward(event):
         global frame_index
-        gpi_slider.set_val(frame_index - 1)
+        phantom_slider.set_val(frame_index - 1)
 
     if not save:
-        gpi_slider.on_changed(update)
+        phantom_slider.on_changed(update)
         forward_button.on_clicked(forward)
         back_button.on_clicked(backward)
 
@@ -441,13 +443,15 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     # Get standard data
     times = acquire.gpi_series(shot, 'phantom2', 'time')
     machine_x, machine_y = acquire.machine_cross_section()
+    if not num_frames:
+        num_frames = len(times)
     
     # Set up indices and get flux data
     efit_times, flux, flux_extent = acquire.time_flux_extent(shot, highres=False)
     if highres:
         efit_times_highres, flux, _ = acquire.time_flux_extent(shot, highres=True)
-        efit_t_index_highres = process.find_nearest(efit_times_highres, times[0])
-    efit_t_index = process.find_nearest(efit_times, times[0])
+        efit_t_index_highres = process.find_nearest(efit_times_highres, times[0], ordered=True)
+    efit_t_index = process.find_nearest(efit_times, times[0], ordered=True)
     efit_phantom_start_index = efit_t_index
     previous_segments_frame_count = [sum([len(e) for e in emissivities[:t_index]]) for t_index in range(len(emissivities))]
     frame_index = 0
@@ -476,7 +480,7 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     
     # Compute plot elements for each frame
     for frame_index in range(num_frames):
-        efit_t_index = process.find_nearest(efit_times, times[frame_index])
+        efit_t_index = process.find_nearest(efit_times, times[frame_index], ordered=True)
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
         
@@ -487,7 +491,7 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
         
         # Plot LCFS and flux contours
         if highres:
-            efit_t_index_highres = process.find_nearest(efit_times_highres, times[frame_index])
+            efit_t_index_highres = process.find_nearest(efit_times_highres, times[frame_index], ordered=True)
             if efit_t_index_highres > previous_efit_t_index:
                 lcfs, = plt.plot(rlcfs[:, efit_t_index_highres], zlcfs[:, efit_t_index_highres], color='orange', alpha=0.5)
                 flux_surfaces = plt.contour(flux[efit_t_index_highres], 300, extent=flux_extent, alpha=0.5)               
@@ -518,9 +522,25 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     plt.close(fig)
 
    
+def main2():
+    import gc
+    import sys
+
+    for shot in [1150625030, 1150820011, 1150923009, 1150923010, 1150923013, 1150923017, 1150929013, 1150929016]:
+        try:
+            animate_emissivity(shot, num_frames=100, highres=True)
+        except:
+            try:
+                animate_emissivity(shot, num_frames=100, highres=False)
+            except Exception as e: 
+                print shot
+                print str(e)
+        gc.collect()
+
+
 def main():
-    shot = 1150611004
-    animate_emissivity(shot, num_frames=100, highres=True)
+    shot = 1150923010
+
 
 
 if __name__ == '__main__':

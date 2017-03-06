@@ -13,12 +13,12 @@ def time_crop((time_s, signal), time):
     Returns
         (time_s, signal): arrays, cropped timepoints and signal
     """
-    argmin = find_nearest(time_s, time[0])
-    argmax = find_nearest(time_s, time[-1])
+    argmin = find_nearest(time_s, time[0], ordered=True)
+    argmax = find_nearest(time_s, time[-1], ordered=True)
     return time_s[argmin:argmax], signal[argmin:argmax]
 
 
-def find_nearest(array, value):
+def find_nearest(array, value, ordered=False):
     """
     Find index of first value in array closest to given value.
     Parameters
@@ -27,7 +27,14 @@ def find_nearest(array, value):
     Returns
         int: argument of array value closest to value supplied
     """
-    return np.abs(array - value).argmin()
+    if ordered:
+        idx = np.searchsorted(array, value, side="left")
+        if idx > 0 and (idx == len(array) or np.fabs(value - array[idx-1]) < np.fabs(value - array[idx])):
+            return array[idx-1]
+        else:
+            return array[idx]
+    else:
+        return np.abs(array - value).argmin()
 
 
 def flip_horizontal(frames):

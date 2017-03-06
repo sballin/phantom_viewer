@@ -317,8 +317,8 @@ def output_frames(shot, start, end, traces=True):
         start_frame = start
         end_frame = end
     else:
-        start_frame = process.find_nearest(time, start)
-        end_frame = process.find_nearest(time, end)
+        start_frame = process.find_nearest(time, start, ordered=True)
+        end_frame = process.find_nearest(time, end, ordered=True)
     frames = acquire.video(shot, camera, sub=20) 
 
     folder_name = '%s-%d-%d' % (shot, start_frame, end_frame)
@@ -341,7 +341,7 @@ def output_frames(shot, start, end, traces=True):
     efit_times = efit_tree.getTimeBase()
     rlcfs = efit_tree.getRLCFS()
     zlcfs = efit_tree.getZLCFS()
-    efit_t_index = process.find_nearest(efit_times, time[0])
+    efit_t_index = process.find_nearest(efit_times, time[0], ordered=True)
     phantom_extent = acquire.extent(shot, camera)
 
     # GPI, LCFS initial plotting
@@ -404,7 +404,7 @@ def plot_field_lines(shot, fl_r, fl_z):
     efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
     efit_times = efit_tree.getTimeBase()
     time = acquire.gpi_series(shot, 'phantom2', 'time')
-    efit_t_index = process.find_nearest(efit_times, time[0])
+    efit_t_index = process.find_nearest(efit_times, time[0], ordered=True)
 
     rlcfs, zlcfs = acquire.lcfs_rz(shot)
     machine_x, machine_y = acquire.machine_cross_section()

@@ -177,3 +177,15 @@ def machine_cross_section():
     efit_tree = eqtools.CModEFIT.CModEFITTree(1150611004)
     machine_x, machine_y = efit_tree.getMachineCrossSectionFull()
     return machine_x, machine_y
+
+
+def current_sign(shot):
+    """
+    Steve Wolfe's method taken from eqtools which didn't
+    implement it for CMod.
+    """
+    efit_tree = eqtools.CModEFIT.CModEFITTree(shot)
+    if np.mean(efit_tree.getIpMeas()) > 1e5: 
+        return 1
+    else:
+        return -1

@@ -9,6 +9,7 @@ Nick Walkden, May 2015
 from cyFieldlineTracer.cyfieldlineTracer import RK4Tracer, Euler2Tracer
 import numpy as np
 from scipy.interpolate import CubicSpline
+from phantom_viewer import acquire
 
 
 def make_fls(shot, time):
@@ -23,6 +24,7 @@ def make_fls(shot, time):
     flz = [0]*(rgrid.shape[0]*zgrid.shape[0])
     flphi = [0]*(rgrid.shape[0]*zgrid.shape[0])
     fli = 0
+    current_sign = acquire.current_sign(shot)
 
     # Interpolate field line shape from 100 to 1000 points, array values 
     # don't matter
@@ -33,7 +35,7 @@ def make_fls(shot, time):
         for r in rgrid:
             # Trace mxstep steps, each 1e-2m with minus sign to go in 
             # counterclockwise direction
-            fl = tracer.trace(r, z, mxstep=mxstep, ds=-1e-2, phistart=(316.5+40)*np.pi/180.)
+            fl = tracer.trace(r, z, mxstep=mxstep, ds=current_sign*1e-2, phistart=(316.5+40)*np.pi/180.)
             # Interpolation takes only first mxstep values; tracer sometimes 
             # gives more if field line hits wall
             flr[fli] = CubicSpline(coarse[:len(fl.R)], fl.R[:mxstep])(fine)

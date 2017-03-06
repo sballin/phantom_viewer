@@ -125,7 +125,7 @@ def test_julia():
     os.system('rm -rf ../cache/fl_matrix_Xpt_{}*.npy'.format(shot))
 
 
-def write_nnls_reconstruction(shot, smoothing_param=0):
+def write_nnls_reconstruction(shot, smoothing_param=100):
     """
     Reconstruct entire shot and save field line emissivity profiles.
 
@@ -142,7 +142,7 @@ def write_nnls_reconstruction(shot, smoothing_param=0):
 
     # Group frames by nearest EFIT timestep
     efit_times = [round(t, 3) for t in acquire.times_efit(shot)]
-    phantom_efit_times = [efit_times[process.find_nearest(efit_times, t)] for t in phantom_times] 
+    phantom_efit_times = [efit_times[process.find_nearest(efit_times, t, ordered=True)] for t in phantom_times] 
     efit_times = sorted([round(t, 3) for t in set(phantom_efit_times)])
     frames_grouped = [[] for i in range(len(efit_times))]
     for i, frame in enumerate(frames):
@@ -157,7 +157,7 @@ def write_nnls_reconstruction(shot, smoothing_param=0):
         fl_files = sorted(glob.glob('../cache/fl_images_Xpt_{}*'.format(shot)))
 
     # Save field line images and phantom frames for julia
-    efit_times = [efit_times[0]] # TEMPORARY PLS REMOVE ME LATER
+    #efit_times = [efit_times[0]] # TEMPORARY PLS REMOVE ME LATER
     for i, time in enumerate(efit_times):
         fl_images = np.load('../cache/fl_images_Xpt_{}_{:02d}.npy'.format(shot, i))
         if smoothing_param:
@@ -172,7 +172,7 @@ def write_nnls_reconstruction(shot, smoothing_param=0):
 
     # Run julia and wait until completion
     print "STATUS: Invoking Julia for NNLS reconstruction"
-    os.system('julia -p 8 nnls.jl {} {} {}'.format(shot, len(efit_times), smoothing_param))
+    os.system('julia -p 7 nnls.jl {} {} {}'.format(shot, len(efit_times), smoothing_param))
     # Delete files saved for julia
     os.system('rm -rf ../cache/frames_Xpt_{}*.npy'.format(shot))
     os.system('rm -rf ../cache/fl_matrix_Xpt_{}*.npy'.format(shot))
@@ -182,11 +182,9 @@ def write_nnls_reconstruction(shot, smoothing_param=0):
 
 
 def main():
-    for shot in [1150611004, 1150717011, 1150625030, 1150820011, 1150929013,
-                 1150929016, 1150923009, 1150923010, 1150923012, 1150923013,
-                 1150923017, 1160505008]:
+    for shot in [1150923012, 1160505008, 1160505011, 1150505013, 1150505014, 1150505015, 1150505016, 1150505017, 1150505018, 1150505022, 1150505023, 1150505030]:
+        print 'STATUS: Working on shot {}'.format(shot)
         write_nnls_reconstruction(shot)
-        write_nnls_reconstruction(shot, smoothing_param=1000)
         acquire.Database().purge()
 
 

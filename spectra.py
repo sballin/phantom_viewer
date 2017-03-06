@@ -108,11 +108,11 @@ def split_PS_analysis(shot, camera, frames, centers):
         for p in region:
             pixel += frames[:, p[0], p[1]] 
     
-        before_transition = process.find_nearest(time, .61329)
+        before_transition = process.find_nearest(time, .61329, ordered=True)
         pixel_before = pixel[:before_transition]
         time_before = time[:before_transition]
         
-        after_transition = process.find_nearest(time, .61601)
+        after_transition = process.find_nearest(time, .61601, ordered=True)
         pixel_after = pixel[after_transition:after_transition+time_before.size]
         time_after = time[after_transition:after_transition+time_before.size]
         
@@ -219,10 +219,10 @@ if __name__ == '__main__':
     # Analyze before/after L-H transition in shot 1150528015
     #centers = [(54, 32), (40, 50), (10, 32), (32, 10)]
     #time = acquire.gpi_series(shot, camera, 'time')
-    #before_transition = process.find_nearest(time, .61329)
+    #before_transition = process.find_nearest(time, .61329, ordered=True)
     #frames_before = frames[:before_transition]
     #bicoh_analysis(shot, camera, frames_before, centers)
-    #after_transition = process.find_nearest(time, .61601)
+    #after_transition = process.find_nearest(time, .61601, ordered=True)
     #frames_after = frames[after_transition:after_transition+frames_before.size]
     #bicoh_analysis(shot, camera, frames_after, centers)
      
