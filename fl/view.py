@@ -287,6 +287,17 @@ def make_grid(rs, zs, r_grid, z_grid, values):
         return scipy.interpolate.griddata(points, values, (r_grid, z_grid), method='linear', fill_value=0)
 
 
+def cutoff_array(values, cutoff):
+    if not cutoff:
+        return values
+    else:
+        maxval = np.max(values)
+        minval = cutoff/100.*maxval
+        temp = np.clip(values-minval, 0, maxval)
+        temp[np.nonzero(temp)] += minval
+        return temp
+
+
 def slide_reconstruction(shot, smoothing_param=100, save=False):
     """
     Slide through Phantom camera frames and their reconstructions from
@@ -310,6 +321,7 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     os.chdir(old_working_dir)
 
     frame_index = 0
+    cutoff = 0
     times = acquire.gpi_series(shot, 'phantom2', 'time')
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     fl_rs = [f.fieldline_r for f in fl_data]
@@ -330,7 +342,7 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
     z_space = np.linspace(np.min(fl_z_all), np.max(fl_z_all), 100)
     r_grid, z_grid = np.meshgrid(r_space, z_space)
-    emissivity_grid = draw_grid(fl_rs[0], fl_zs[0], r_grid, z_grid, emissivities[0][0])
+    emissivity_grid = make_grid(fl_rs[0], fl_zs[0], r_grid, z_grid, emissivities[0][0])
     
     # Draw figure using first frame
     fig, ax = plt.subplots()
@@ -376,21 +388,26 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
         phantom_slider = Slider(phantom_slide_area, 'Camera frame', 0, len(frames)-1,
                             valinit=0)
         phantom_slider.valfmt = '%d'
+        cutoff_slider_area = plt.axes([0.20, 0.05, 0.60, 0.03])
+        cutoff_slider = Slider(cutoff_slider_area, 'Cutoff', 0, 100, valinit=0)
+        cutoff_slider.valfmt = '%d%%'
         forward_button_area = plt.axes([0.95, 0.06, 0.04, 0.04])
         forward_button = Button(forward_button_area, '>')
         back_button_area = plt.axes([0.95, 0.01, 0.04, 0.04])
         back_button = Button(back_button_area, '<')
 
-    def update(val):
+    def update_frame(val):
         global efit_t_index, frame_index
         frame_index = int(val)
+        cutoff = cutoff_slider.val
 
         # Recalculate things
         efit_t_index = process.find_nearest(efit_times, times[frame_index], ordered=True)
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
-        emissivity_grid = make_grid(fl_rs[efit_rel_index], fl_zs[efit_rel_index], r_grid, z_grid, emissivities[efit_rel_index][frame_rel_index]) 
-        reconstructed = geomatrices[efit_rel_index].dot(emissivities[efit_rel_index][frame_rel_index]).reshape((64,64))
+        emissivity_cutoff = cutoff_array(emissivities[efit_rel_index][frame_rel_index], cutoff)
+        emissivity_grid = make_grid(fl_rs[efit_rel_index], fl_zs[efit_rel_index], r_grid, z_grid, emissivity_cutoff) 
+        reconstructed = geomatrices[efit_rel_index].dot(emissivity_cutoff).reshape((64,64))
 
         # Update canvas
         plasma_image.set_array(frames[frame_index])
@@ -403,7 +420,6 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
         error_image.autoscale()
         l.set_xdata(rlcfs[efit_t_index])
         l.set_ydata(zlcfs[efit_t_index])
-        fig.canvas.draw_idle()
         title.set_text('Shot {} frame {}'.format(shot, frame_index))
 
     def forward(event):
@@ -414,18 +430,21 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
         global frame_index
         phantom_slider.set_val(frame_index - 1)
 
-    if not save:
-        phantom_slider.on_changed(update)
-        forward_button.on_clicked(forward)
-        back_button.on_clicked(backward)
+    def update_cutoff(val):
+        global frame_index
+        update_frame(frame_index)
 
     if save:
         FFMpegWriter = animation.writers['ffmpeg']
         writer = FFMpegWriter(fps=15, bitrate=5000)
-        anim = animation.FuncAnimation(fig, update, frames=1000, interval=5, blit=False)
+        anim = animation.FuncAnimation(fig, update_frame, frames=1000, interval=5, blit=False)
         anim.save('{}_sp{}.avi'.format(shot, smoothing_param), writer=writer)
         plt.close(fig)
     else:
+        phantom_slider.on_changed(update_frame)
+        cutoff_slider.on_changed(update_cutoff)
+        forward_button.on_clicked(forward)
+        back_button.on_clicked(backward)
         plt.show()
 
 
@@ -531,7 +550,7 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
     plt.close(fig)
 
    
-def main2():
+def make_videos():
     import gc
     import sys
 
