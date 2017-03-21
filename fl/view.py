@@ -9,6 +9,7 @@ from phantom_viewer import acquire
 from phantom_viewer import signals
 from phantom_viewer import process
 import scipy.optimize
+import scipy.interpolate
 import glob
 import types
 
@@ -278,6 +279,14 @@ def slide_reconstruct(shot, fl_sav, smoothing_param=100):
     plt.show()
 
 
+def make_grid(rs, zs, r_grid, z_grid, values):
+    try:
+        return matplotlib.mlab.griddata(rs, zs, values, r_grid, z_grid, interp='linear') 
+    except:
+        points = np.array(zip(rs, zs), dtype=np.float)
+        return scipy.interpolate.griddata(points, values, (r_grid, z_grid), method='linear', fill_value=0)
+
+
 def slide_reconstruction(shot, smoothing_param=100, save=False):
     """
     Slide through Phantom camera frames and their reconstructions from
@@ -321,7 +330,7 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     r_space = np.linspace(np.min(fl_r_all), np.max(fl_r_all), 100)
     z_space = np.linspace(np.min(fl_z_all), np.max(fl_z_all), 100)
     r_grid, z_grid = np.meshgrid(r_space, z_space)
-    emissivity_grid = matplotlib.mlab.griddata(fl_rs[0], fl_zs[0], emissivities[0][0], r_grid, z_grid, interp='linear') 
+    emissivity_grid = draw_grid(fl_rs[0], fl_zs[0], r_grid, z_grid, emissivities[0][0])
     
     # Draw figure using first frame
     fig, ax = plt.subplots()
@@ -380,7 +389,7 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
         efit_t_index = process.find_nearest(efit_times, times[frame_index], ordered=True)
         efit_rel_index = efit_t_index - efit_phantom_start_index
         frame_rel_index = frame_index - previous_segments_frame_count[efit_rel_index]
-        emissivity_grid = matplotlib.mlab.griddata(fl_rs[efit_rel_index], fl_zs[efit_rel_index], emissivities[efit_rel_index][frame_rel_index], r_grid, z_grid, interp='linear') 
+        emissivity_grid = make_grid(fl_rs[efit_rel_index], fl_zs[efit_rel_index], r_grid, z_grid, emissivities[efit_rel_index][frame_rel_index]) 
         reconstructed = geomatrices[efit_rel_index].dot(emissivities[efit_rel_index][frame_rel_index]).reshape((64,64))
 
         # Update canvas
@@ -539,8 +548,8 @@ def main2():
 
 
 def main():
-    shot = 1150923010
-
+    shot = 1150625030
+    slide_reconstruction(shot)
 
 
 if __name__ == '__main__':

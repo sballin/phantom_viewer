@@ -172,7 +172,7 @@ def write_nnls_reconstruction(shot, smoothing_param=100):
 
     # Run julia and wait until completion
     print "STATUS: Invoking Julia for NNLS reconstruction"
-    os.system('julia -p 7 nnls.jl {} {} {}'.format(shot, len(efit_times), smoothing_param))
+    os.system('julia -p 8 nnls.jl {} {} {}'.format(shot, len(efit_times), smoothing_param))
     # Delete files saved for julia
     os.system('rm -rf ../cache/frames_Xpt_{}*.npy'.format(shot))
     os.system('rm -rf ../cache/fl_matrix_Xpt_{}*.npy'.format(shot))
@@ -182,7 +182,7 @@ def write_nnls_reconstruction(shot, smoothing_param=100):
 
 
 def main():
-    for shot in [1150923012, 1160505008, 1160505011, 1150505013, 1150505014, 1150505015, 1150505016, 1150505017, 1150505018, 1150505022, 1150505023, 1150505030]:
+    for shot in [1160505008, 1160505011]:
         print 'STATUS: Working on shot {}'.format(shot)
         write_nnls_reconstruction(shot)
         acquire.Database().purge()

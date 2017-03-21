@@ -30,9 +30,9 @@ def find_nearest(array, value, ordered=False):
     if ordered:
         idx = np.searchsorted(array, value, side="left")
         if idx > 0 and (idx == len(array) or np.fabs(value - array[idx-1]) < np.fabs(value - array[idx])):
-            return array[idx-1]
+            return idx-1
         else:
-            return array[idx]
+            return idx
     else:
         return np.abs(array - value).argmin()
 
