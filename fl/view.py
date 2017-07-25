@@ -353,25 +353,25 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     plt.title('Divertor camera view')
     plasma_image = plt.imshow(frames[0], cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
-    plt.colorbar()
+    #plt.colorbar()
     
     plt.subplot(222)
     plt.title('Reconstruction')
     reconstruction_image = plt.imshow(reconstructed, cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
-    plt.colorbar()
+    #plt.colorbar()
     
     plt.subplot(223)
     plt.title('Original minus reconstruction')
     error_image = plt.imshow(frames[0] - reconstructed, cmap=plt.cm.gist_heat, origin='bottom')
     plt.axis('off')
-    plt.colorbar()
+    #plt.colorbar()
     
     plt.subplot(224)
     plt.title('Toroidal cross section')
     emissivity_image = plt.pcolormesh(r_grid, z_grid, emissivity_grid, cmap=plt.cm.plasma)
-    colorbar = plt.colorbar()
-    colorbar.set_label('Relative emissivity')
+    #colorbar = plt.colorbar()
+    #colorbar.set_label('Relative emissivity')
     plt.axis('equal')
     plt.plot(machine_x, machine_y, color='gray')
     l, = plt.plot(rlcfs[efit_phantom_start_index], 
@@ -553,6 +553,11 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
 def make_videos():
     import gc
     import sys
+
+    allshots = [1150611004, 1150717011, 1150625030, 1150820011, 1150929013, 1150929016, 
+                1150923009, 1150923010, 1150923012, 1150923013, 1150923017, 1160505008,
+                1160505011, 1150505013, 1150505014, 1150505015, 1150505016, 1150505017,
+                1150505018, 1150505022, 1150505023, 1150505030]
 
     for shot in [1150625030, 1150820011, 1150923009, 1150923010, 1150923013, 1150923017, 1150929013, 1150929016]:
         try:
