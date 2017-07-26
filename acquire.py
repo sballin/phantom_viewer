@@ -140,8 +140,6 @@ def time_dens(shot):
     """
     tree = 'electrons'
     node_name = 'tci.results.nl_04'
-    import pdb; pdb.set_trace()
-
     return (get_mds(shot, node_name, tree=tree, dim_of=True), 
             np.array(get_mds(shot, node_name, tree=tree))/.6e20)
 
