@@ -129,24 +129,26 @@ def time_ha2(shot):
     """
     Get timepoints and H_alpha signal for specified shot.
     """
-    tree = MDSplus.Tree('spectroscopy', shot)
-    node = tree.getNode('\\ha_2_bright')
-    return node.dim_of().data(), node.data()
+    node_name = '\\ha_2_bright'
+    return (get_mds(shot, node_name, dim_of=True), 
+            get_mds(shot, node_name))
 
 
 def time_dens(shot):
     """
     Get timepoints and line average density for specified shot.
     """
-    tree = MDSplus.Tree('electrons', shot)
-    node = tree.getNode('tci.results.nl_04')
-    return node.dim_of().data(), np.array(node.data())/.6e20
+    tree = 'electrons'
+    node_name = 'tci.results.nl_04'
+    return (get_mds(shot, node_name, tree=tree, dim_of=True), 
+            np.array(get_mds(shot, node_name, tree=tree))/.6e20)
 
 
 def time_probe(shot):
-    tree = MDSplus.Tree('edge', shot)
-    node = tree.getNode('probes.fmp.id_01.p0.i_slow')
-    return node.dim_of().data(), node.data()
+    tree = 'edge'
+    node_name = 'probes.fmp.id_01.p0.i_slow'
+    return (get_mds(shot, node_name, tree=tree, dim_of=True),
+            get_mds(shot, node_name, tree=tree))
 
 
 def times_efit(shot):
