@@ -64,7 +64,7 @@ def video(shot, camera='phantom2', sub=0, blur=0, sobel=False, cache=False):
     
 def get_mds(shot, node, tree='spectroscopy', dim_of=False, cache=True):
     code_directory = os.path.dirname(os.path.abspath(__file__))
-    dim_of_flag = '_dimof_' if dim_of else ''
+    dim_of_flag = '_dimof' if dim_of else ''
     cached_filename = '{}/cache/{}{}_{}.npy'.format(code_directory, node, dim_of_flag, shot)
     # Try to get from disk cache
     try:
@@ -72,7 +72,7 @@ def get_mds(shot, node, tree='spectroscopy', dim_of=False, cache=True):
     except:
         # Try to get from MDSplus server on-site
         try:
-            tree = MDSplus.Tree('spectroscopy', shot)
+            tree = MDSplus.Tree(tree, shot)
             if dim_of:
                 out = tree.getNode(node).dim_of().data()
             else:
@@ -140,6 +140,8 @@ def time_dens(shot):
     """
     tree = 'electrons'
     node_name = 'tci.results.nl_04'
+    import pdb; pdb.set_trace()
+
     return (get_mds(shot, node_name, tree=tree, dim_of=True), 
             np.array(get_mds(shot, node_name, tree=tree))/.6e20)
 
