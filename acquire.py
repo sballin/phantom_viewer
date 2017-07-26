@@ -62,7 +62,7 @@ def video(shot, camera='phantom2', sub=0, blur=0, sobel=False, cache=False):
     return out
     
     
-def get_mds(shot, tree='spectroscopy', node, dim_of=False, cache=True):
+def get_mds(shot, node, tree='spectroscopy', dim_of=False, cache=True):
     code_directory = os.path.dirname(os.path.abspath(__file__))
     dim_of_flag = '_dimof_' if dim_of else ''
     cached_filename = '{}/cache/{}{}_{}.npy'.format(code_directory, node, dim_of_flag, shot)
