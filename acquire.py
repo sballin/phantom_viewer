@@ -1,8 +1,8 @@
-import sys
-import MDSplus
+import os
 import numpy as np
 import process
 import eqtools
+import MDSplus
 
 
 class Database:
@@ -10,39 +10,84 @@ class Database:
 
     def purge(self):
         for key in self.vids.keys(): del(self.vids[key])
+        
 
-
-def video(shot, camera='phantom2', sub=0, blur=0, sobel=False): 
-    key = str(shot) + camera
-    try: out = Database().vids[key]
+def video(shot, camera='phantom2', sub=0, blur=0, sobel=False, cache=False): 
+    key = '{}_{}'.format(shot, camera)
+    
+    # Try to get from memory cache
+    try: 
+        out = Database().vids[key]
     except KeyError: 
-        if camera == 'phantom' or camera == 'phantom2':
+        # Try to get from disk cache
+        try:
+            code_directory = os.path.dirname(os.path.abspath(__file__))
             out = Database().vids[key] \
-                = process.flip_horizontal(gpi_series(shot, camera, 'frames'))
-        else: out = Database().vids[key] = other_video(shot, camera)
+                = np.load('{}/cache/frames_{}.npy'.format(code_directory, key))
+        except:
+            # Download using MDSplus, mem-cache, optionally disk-cache, and serve
+            if camera == 'phantom' or camera == 'phantom2':
+                out = Database().vids[key] \
+                    = process.flip_horizontal(gpi_series(shot, camera, 'frames'))
+            else: 
+                out = Database().vids[key] \
+                    = other_video(shot, camera)
+            if cache:
+                code_directory = os.path.dirname(os.path.abspath(__file__))
+                np.save('{}/cache/frames_{}.npy'.format(code_directory, key), out)
+    
+    # For processed videos, check whether already mem-cached, if not mem-cache and serve
     if sub: 
-        key += 'sub%d' % sub
+        key = '{}_sub{}'.format(key, sub)
         try: 
             out = Database().vids[key] 
         except KeyError: 
-            out = Database().vids[key] = process.subtract_min(out, sub)
+            out = Database().vids[key] \
+                = process.subtract_min(out, sub)
     if blur:
-        key += 'gauss%d' % blur
+        key = '{}_gauss{}'.format(key, blur)
         try: 
             out = Database().vids[key] 
         except KeyError: 
-            out = Database().vids[key] = process.gauss(np.copy(out), blur)
+            out = Database().vids[key] \
+                = process.gauss(np.copy(out), blur)
     if sobel: 
-        key += 'sobel'
+        key = '{}_sobel'.format(key)
         try: 
             out = Database().vids[key] 
         except KeyError: 
             out = Database().vids[key] \
                 = process.kill_sobel_edges(process.sobel(np.copy(out)))
+                
     return out
+    
+    
+def get_mds(shot, tree='spectroscopy', node, dim_of=False, cache=True):
+    code_directory = os.path.dirname(os.path.abspath(__file__))
+    dim_of_flag = '_dimof_' if dim_of else ''
+    cached_filename = '{}/cache/{}{}_{}.npy'.format(code_directory, node, dim_of_flag, shot)
+    # Try to get from disk cache
+    try:
+        out = np.load(cached_filename)
+    except:
+        # Try to get from MDSplus server on-site
+        try:
+            tree = MDSplus.Tree('spectroscopy', shot)
+            if dim_of:
+                out = tree.getNode(node).dim_of().data()
+            else:
+                out = tree.getNode(node).data()
+                
+        # Try to get from MDSplus server offsite
+        except:
+            connection = MDSplus.Connection('localhost')
+            
+        if cache:
+            np.save(cached_filename, out)
+    return out
+        
 
-
-def gpi_series(shot, camera, series_name):
+def gpi_series(shot, camera, series_name, cache=True):
     """
     Get specified GPI-related series.
     Parameters
@@ -54,22 +99,19 @@ def gpi_series(shot, camera, series_name):
     Returns
         series: chosen with series_name
     """
-    tree = MDSplus.Tree('spectroscopy', shot)
     if series_name == 'time': 
         try: 
-            series = tree.getNode('gpi.%s.t_hists' % camera).dim_of().data()
+            series = get_mds(shot, 'gpi.%s.t_hists' % camera, dim_of=True, cache=cache)
         except MDSplus._tdishr.TdiException: 
             print 'Time not loaded from t_hists'
-            start = tree.getNode('gpi.%s.settings.trig_time' % camera).data()
-            frame_rate = tree.getNode('gpi.%s.settings.frame_rate' 
-                                      % camera).data()
-            num_frames = tree.getNode('gpi.%s.settings.num_frames' 
-                                      % camera).data()
+            start = get_mds(shot, 'gpi.%s.settings.trig_time' % camera, cache=cache)
+            frame_rate = get_mds(shot, 'gpi.%s.settings.frame_rate' % camera, cache=cache)
+            num_frames = get_mds(shot, 'gpi.%s.settings.num_frames' % camera, cache=cache)
             return np.arange(start, start + num_frames/float(frame_rate), 
                              1./frame_rate)
-    else: 
-        series = tree.getNode('gpi.%s.%s' % (camera, series_name)).data()
-    return series 
+    else:
+        series = get_mds(shot, 'gpi.%s.%s' % (camera, series_name), cache=cache)
+    return series
 
 
 def other_video(shot, camera='raspi2'):

@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import scipy.ndimage
@@ -153,7 +152,4 @@ def sum_frames(frames):
         sum_frames: NumPy array with dimension (frame count)
     """
     sum_frames = [np.sum(frames[i]) for i in range(frames.shape[0])]
-    plt.figure(); plt.plot(sum_frames); plt.show()
     return sum_frames
-
-
