@@ -14,7 +14,7 @@ def time_crop((time_s, signal), time):
     """
     argmin = find_nearest(time_s, time[0], ordered=True)
     argmax = find_nearest(time_s, time[-1], ordered=True)
-    return time_s[argmin:argmax], signal[argmin:argmax]
+    return (time_s[argmin:argmax], signal[argmin:argmax])
 
 
 def find_nearest(array, value, ordered=False):
@@ -56,7 +56,7 @@ def average_frames(frames, interval):
                      for each [interval] frames supplied
     """
     frame_count = frames.shape[0]
-    halfint = interval/2
+    halfint = interval//2
     averages = np.zeros(frames.shape)
     for i in range(frame_count):
         if i < halfint:
@@ -90,29 +90,29 @@ def subtract_min(frames, interval, correct_saturation=True):
         interval: int, number of frames in which to look for min
     """
     frame_count = frames.shape[0]
-    halfint = interval/2
+    halfint = interval//2
     mins = np.zeros(frames.shape)
     upper_lim = frame_count - halfint
     for f in xrange(frame_count):
-        if halfint < f < upper_lim:
+        if halfint <= f <= upper_lim:
             mins[f] = np.min(frames[f-halfint:f+halfint], axis=0)
         elif f < halfint:
             mins[f] = np.min(frames[:interval], axis=0)
         else:
-            mins[f] = np.min(frames[-interval], axis=0)
+            mins[f] = np.min(frames[-interval:], axis=0)
     subtracted = frames - mins
     del mins
 
-    # Set saturated pixels to the max value in their respective frames
+    # Set saturated pixels to the min value in their respective frames
     if correct_saturation:
         frames_diff = frames - subtracted
         max_brightness = np.max(frames)
         # Get saturated pixel locations as ([frames], [pixel is], [pixel js])
         sat_spots = np.where(frames_diff > 4040)
         for i, f in enumerate(sat_spots[0]):
-            subtracted[f, sat_spots[1][i], sat_spots[2][i]] = np.max(subtracted[f])
+            subtracted[f, sat_spots[1][i], sat_spots[2][i]] = np.min(subtracted[f])
         del frames_diff, sat_spots 
-
+        
     return subtracted
 
 
@@ -151,5 +151,5 @@ def sum_frames(frames):
     Returns
         sum_frames: NumPy array with dimension (frame count)
     """
-    sum_frames = [np.sum(frames[i]) for i in range(frames.shape[0])]
+    sum_frames = [np.sum(frames[i]) for i in xrange(frames.shape[0])]
     return sum_frames

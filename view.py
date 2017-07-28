@@ -26,7 +26,6 @@ def animate_phantom(shot, camera='phantom2', sub=20, blur=0, sobel=False,
     # Get time and frames
     time = acquire.gpi_series(shot, camera, 'time')
     frames = acquire.video(shot, camera, sub=sub, blur=blur, sobel=sobel)
-    frame_count = frames.shape[0]
 
     # Phantom frame plot
     gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
@@ -141,7 +140,7 @@ def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0,
  
     # Slider settings
     slide_area = plt.axes([0.10, 0.1, 0.65, 0.03])
-    slider = Slider(slide_area, 'Frame', 0, frame_count, valinit=0)
+    slider = Slider(slide_area, 'Frame', 0, frame_count-1, valinit=0)
     slider.drawon = True
     slider.valfmt = '%d'
     slider.on_changed(update)
@@ -190,7 +189,7 @@ def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0,
     back_button = Button(back_button_area, '<')
     back_button.on_clicked(backward)
 
-    def filter(label):
+    def apply_filter(label):
         global frames
         if label == 'Orig': 
             frames = acquire.video(shot, camera)
@@ -221,7 +220,7 @@ def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0,
     filter_radio = RadioButtons(filter_radio_area, ('Orig', 'Sub %d' % sub, 
                                                     'Blur %d' % blur, 
                                                     'Sobel'))
-    filter_radio.on_clicked(filter)
+    filter_radio.on_clicked(apply_filter)
     cmap_radio_area = plt.axes([left, bottom-.08, .1, .07])
     cmap_radio = RadioButtons(cmap_radio_area, ('Red', 'Gray'))
     cmap_radio.on_clicked(cmap_change)
@@ -230,7 +229,7 @@ def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0,
     recolor_button.on_clicked(recolor)
 
     # Black magic to fix strange global variable error
-    filter('Orig')
+    apply_filter('Orig')
 
     plt.show()
 

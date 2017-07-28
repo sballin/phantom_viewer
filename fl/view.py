@@ -12,6 +12,7 @@ import scipy.optimize
 import scipy.interpolate
 import glob
 import types
+import gc
 
 
 def make_colormap(seq):
@@ -305,7 +306,6 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     
     Args:
         shot: [int] shot number
-        fl_sav: [scipy.io.idl.readsav object] containing field line images
     """
     # Read cache files broken up by EFIT time segment
     old_working_dir = os.getcwd()
@@ -321,7 +321,6 @@ def slide_reconstruction(shot, smoothing_param=100, save=False):
     os.chdir(old_working_dir)
 
     frame_index = 0
-    cutoff = 0
     times = acquire.gpi_series(shot, 'phantom2', 'time')
     frames = acquire.video(shot, 'phantom2', sub=20, sobel=False)
     fl_rs = [f.fieldline_r for f in fl_data]
@@ -551,9 +550,6 @@ def animate_emissivity(shot, num_frames=1000, smoothing_param=100, highres=False
 
    
 def make_videos():
-    import gc
-    import sys
-
     allshots = [1150611004, 1150717011, 1150625030, 1150820011, 1150929013, 1150929016, 
                 1150923009, 1150923010, 1150923012, 1150923013, 1150923017, 1160505008,
                 1160505011, 1150505013, 1150505014, 1150505015, 1150505016, 1150505017,
@@ -572,7 +568,7 @@ def make_videos():
 
 
 def main():
-    shot = 1150625030
+    shot = 1150611004
     slide_reconstruction(shot)
 
 
