@@ -74,7 +74,7 @@ def animate_phantom(shot, camera='phantom2', sub=20, blur=0, sobel=False,
     plt.show()
 
 
-def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0, 
+def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=50, 
                   pixel_t_hist=None):
     """
     Slide through Phantom frames while displaying last closed flux surface and 
@@ -167,7 +167,7 @@ def slide_phantom(shot, camera='phantom2', sub=20, blur=3, interval=0,
     
     def play(event):
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=frame_count, interval=interval, 
+                                       frames=100, interval=interval, 
                                        blit=False)
 
     def forward(event):
